@@ -207,8 +207,12 @@ module ascon128 (
                 // ── Wait for start pulse ──
                 S_IDLE: begin
                     if (start) begin
-                        busy  <= 1'b1;
-                        state <= S_INIT_LOAD;
+                        busy       <= 1'b1;
+                        // Clear ciphertext so a shorter operation can't expose
+                        // leftover bytes from a previous, unrelated encryption
+                        // (only the blocks up to pt_blocks get overwritten below)
+                        ciphertext <= 256'd0;
+                        state      <= S_INIT_LOAD;
                     end
                 end
 

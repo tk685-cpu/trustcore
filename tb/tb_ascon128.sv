@@ -2,7 +2,8 @@
 //
 // Compile:  iverilog -g2012 -o sim_ascon tb_ascon128.sv ascon128.v
 // Run all:  vvp sim_ascon
-// Run one:  vvp sim_ascon +test-case=1   (1=simple, 2=corner cases, 3=random, 4=known-answer)
+// Run one:  vvp sim_ascon +test-case=1   (1=simple, 2=corner cases, 3=random,
+//                                          4=known-answer, 5=KAT length sweep)
 // Seed:     vvp sim_ascon +test-case=3 +seed=1234
 //
 // Known-answer values (used in 1.5, 2.5, 2.6, and all of Test 4) were computed
@@ -326,6 +327,80 @@ module tb_ascon128;
                       128'h01a8807a44254b42ac6bb490da1e000a, "4.3");
     endtask
 
+    // Test 5: KAT sweep across real plaintext lengths 0-24 bytes (every
+    // padding-boundary case: empty, partial-block, exact-multiple-of-8, and
+    // one byte past a boundary). Same independent-model methodology as
+    // Test 4 -- verified against a from-scratch Python re-implementation of
+    // this RTL's exact round function, cross-checked against the real
+    // Python `ascon` package for 200 random trials before generating these.
+    task automatic test_case_5();
+        // 5.1 real_len=0 -> padded_len=8
+        run_encrypt(128'h000102030405060708090a0b0c0d0e0f, 128'h000102030405060708090a0b0c0d0e0f,
+                    256'h8000000000000000000000000000000000000000000000000000000000000000, 8'd8, 256'd0, 8'd0);
+        check_result(256'h3c830fbef3a1651b000000000000000000000000000000000000000000000000,
+                      128'he355159f292911f794cb1432a0103a8a, "5.1");
+
+        // 5.2 real_len=1 -> padded_len=8
+        run_encrypt(128'h000102030405060708090a0b0c0d0e0f, 128'h000102030405060708090a0b0c0d0e0f,
+                    256'h0080000000000000000000000000000000000000000000000000000000000000, 8'd8, 256'd0, 8'd0);
+        check_result(256'hbc030fbef3a1651b000000000000000000000000000000000000000000000000,
+                      128'h18c3f4e39eca7222490d967c79bffc92, "5.2");
+
+        // 5.3 real_len=4 -> padded_len=8
+        run_encrypt(128'h000102030405060708090a0b0c0d0e0f, 128'h000102030405060708090a0b0c0d0e0f,
+                    256'h0001020380000000000000000000000000000000000000000000000000000000, 8'd8, 256'd0, 8'd0);
+        check_result(256'hbc820dbd73a1651b000000000000000000000000000000000000000000000000,
+                      128'h218c5c93e3850e974a3704d1223bdefb, "5.3");
+
+        // 5.4 real_len=7 -> padded_len=8
+        run_encrypt(128'h000102030405060708090a0b0c0d0e0f, 128'h000102030405060708090a0b0c0d0e0f,
+                    256'h0001020304050680000000000000000000000000000000000000000000000000, 8'd8, 256'd0, 8'd0);
+        check_result(256'hbc820dbdf7a4639b000000000000000000000000000000000000000000000000,
+                      128'hce9985966c40bc56a9c5180e23f7086c, "5.4");
+
+        // 5.5 real_len=8 -> padded_len=16 (exact multiple of 8: full extra block)
+        run_encrypt(128'h000102030405060708090a0b0c0d0e0f, 128'h000102030405060708090a0b0c0d0e0f,
+                    256'h0001020304050607800000000000000000000000000000000000000000000000, 8'd16, 256'd0, 8'd0);
+        check_result(256'hbc820dbdf7a4631cd3208241da9c7bcc00000000000000000000000000000000,
+                      128'h01a8807a44254b42ac6bb490da1e000a, "5.5");
+
+        // 5.6 real_len=12 -> padded_len=16
+        run_encrypt(128'h000102030405060708090a0b0c0d0e0f, 128'h000102030405060708090a0b0c0d0e0f,
+                    256'h000102030405060708090a0b8000000000000000000000000000000000000000, 8'd16, 256'd0, 8'd0);
+        check_result(256'hbc820dbdf7a4631c5b29884a5a9c7bcc00000000000000000000000000000000,
+                      128'h7d1c07dc8d0d5ed48e64d7dcb25c325f, "5.6");
+
+        // 5.7 real_len=15 -> padded_len=16
+        run_encrypt(128'h000102030405060708090a0b0c0d0e0f, 128'h000102030405060708090a0b0c0d0e0f,
+                    256'h000102030405060708090a0b0c0d0e8000000000000000000000000000000000, 8'd16, 256'd0, 8'd0);
+        check_result(256'hbc820dbdf7a4631c5b29884ad691754c00000000000000000000000000000000,
+                      128'h16d420a5bc2e5357d010818f0b5f7859, "5.7");
+
+        // 5.8 real_len=16 -> padded_len=24 (exact multiple of 8: full extra block)
+        run_encrypt(128'h000102030405060708090a0b0c0d0e0f, 128'h000102030405060708090a0b0c0d0e0f,
+                    256'h000102030405060708090a0b0c0d0e0f80000000000000000000000000000000, 8'd24, 256'd0, 8'd0);
+        check_result(256'hbc820dbdf7a4631c5b29884ad69175c3a88747d99520dff10000000000000000,
+                      128'hf58e28436dd71556d58dfa56ac890beb, "5.8");
+
+        // 5.9 real_len=20 -> padded_len=24
+        run_encrypt(128'h000102030405060708090a0b0c0d0e0f, 128'h000102030405060708090a0b0c0d0e0f,
+                    256'h000102030405060708090a0b0c0d0e0f10111213800000000000000000000000, 8'd24, 256'd0, 8'd0);
+        check_result(256'hbc820dbdf7a4631c5b29884ad69175c3389655ca1520dff10000000000000000,
+                      128'h4af310ab698b3090a7cbdbf3432d3dd4, "5.9");
+
+        // 5.10 real_len=23 -> padded_len=24
+        run_encrypt(128'h000102030405060708090a0b0c0d0e0f, 128'h000102030405060708090a0b0c0d0e0f,
+                    256'h000102030405060708090a0b0c0d0e0f10111213141516800000000000000000, 8'd24, 256'd0, 8'd0);
+        check_result(256'hbc820dbdf7a4631c5b29884ad69175c3389655ca8135c9710000000000000000,
+                      128'hd5e2571d16c89b50a8a0bf0f59940744, "5.10");
+
+        // 5.11 real_len=24 -> padded_len=32 (exact multiple of 8: full extra block, max length)
+        run_encrypt(128'h000102030405060708090a0b0c0d0e0f, 128'h000102030405060708090a0b0c0d0e0f,
+                    256'h000102030405060708090a0b0c0d0e0f10111213141516178000000000000000, 8'd32, 256'd0, 8'd0);
+        check_result(256'hbc820dbdf7a4631c5b29884ad69175c3389655ca8135c9e670e76e7c3b729768,
+                      128'h576f4d9312543671819cbe00bff09ed5, "5.11");
+    endtask
+
     // Runs one test case, prints how many of its checks passed
     task automatic run_test(input int num);
         int pass_before = pass_cnt;
@@ -336,6 +411,7 @@ module tb_ascon128;
             2: test_case_2();
             3: test_case_3();
             4: test_case_4();
+            5: test_case_5();
         endcase
         total = (pass_cnt + fail_cnt) - (pass_before + fail_before);
         $display("Test %0d: %0d/%0d passed", num, pass_cnt - pass_before, total);
@@ -368,11 +444,13 @@ module tb_ascon128;
             2: run_test(2);
             3: run_test(3);
             4: run_test(4);
+            5: run_test(5);
             default: begin
                 run_test(1);
                 run_test(2);
                 run_test(3);
                 run_test(4);
+                run_test(5);
             end
         endcase
 
