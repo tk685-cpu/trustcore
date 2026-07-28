@@ -3,6 +3,7 @@
 # Falls back to 25 when the design is synthesized standalone -- the
 # frequency verified in simulation (tb_chip_top.sv SYS_CLK_HALF=20ns).
 
+
 if {[info exists ::env(FREQ_MHZ)]} {
     set FREQ_MHZ $::env(FREQ_MHZ)
 } else {
