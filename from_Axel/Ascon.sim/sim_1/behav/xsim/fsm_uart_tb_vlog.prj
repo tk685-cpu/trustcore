@@ -1,0 +1,37 @@
+# compile verilog/system verilog design source files
+verilog xil_defaultlib  --include "../../../../Ascon.ip_user_files/ipstatic" \
+"../../../../Ascon.gen/sources_1/ip/blk_mem_gen_1/sim/blk_mem_gen_1.v" \
+"../../../../Ascon.gen/sources_1/ip/blk_mem_gen_0/sim/blk_mem_gen_0.v" \
+
+sv xil_defaultlib  --include "../../../../Ascon.ip_user_files/ipstatic" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/ascon_pack.sv" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/Pc.sv" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/Permutation.sv" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/Pl.sv" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/Ps.sv" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/Sbox.sv" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/ascon.sv" \
+"../../../../Ascon.srcs/sources_1/new/ascon_top.sv" \
+"../../../../Ascon.srcs/sources_1/imports/source/uart_pkg.sv" \
+"../../../../Ascon.srcs/sources_1/new/bloc_counter.sv" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/compteur_double_init.sv" \
+"../../../../Ascon.srcs/sources_1/new/drive_ascon.sv" \
+"../../../../Ascon.srcs/sources_1/new/fsm_counter.sv" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/fsm_moore.sv" \
+"../../../../Ascon.srcs/sources_1/new/fsm_uart.sv" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/mux_state.sv" \
+"../../../../Ascon.srcs/sources_1/new/reg_shift128.sv" \
+"../../../../Ascon.srcs/sources_1/new/reg_shift64.sv" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/register_w_en.sv" \
+"../../../../Ascon.srcs/sources_1/new/regshift_Tx.sv" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/state_register_w_en.sv" \
+"../../../../Ascon.srcs/sources_1/imports/source/trans_receive.sv" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/xor_begin_perm.sv" \
+"../../../../Ascon.srcs/sources_1/imports/Sources_ascon-20260223/xor_end_perm.sv" \
+"../../../../Ascon.srcs/sim_1/new/fsm_uart_tb.sv" \
+
+# compile glbl module
+verilog xil_defaultlib "glbl.v"
+
+# Do not sort compile order
+nosort

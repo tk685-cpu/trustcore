@@ -1,0 +1,90 @@
+#-----------------------------------------------------------
+# Vivado v2024.2 (64-bit)
+# SW Build 5239630 on Fri Nov 08 22:35:27 MST 2024
+# IP Build 5239520 on Sun Nov 10 16:12:51 MST 2024
+# SharedData Build 5239561 on Fri Nov 08 14:39:27 MST 2024
+# Start of session at: Fri Mar 13 13:17:30 2026
+# Process ID         : 7160
+# Current directory  : C:/Users/eleves/Desktop/Ascon
+# Command line       : vivado.exe -gui_launcher_event rodinguilauncherevent8700 C:\Users\eleves\Desktop\Ascon\Ascon.xpr
+# Log file           : C:/Users/eleves/Desktop/Ascon/vivado.log
+# Journal file       : C:/Users/eleves/Desktop/Ascon\vivado.jou
+# Running On         : GCP-E101-12
+# Platform           : Windows Server 2016 or Windows 10
+# Operating System   : 26100
+# Processor Detail   : Intel(R) Core(TM) i5-8400 CPU @ 2.80GHz
+# CPU Frequency      : 2808 MHz
+# CPU Physical cores : 6
+# CPU Logical cores  : 6
+# Host memory        : 16966 MB
+# Swap memory        : 17179 MB
+# Total Virtual      : 34146 MB
+# Available Virtual  : 27505 MB
+#-----------------------------------------------------------
+start_gui
+open_project C:/Users/eleves/Desktop/Ascon/Ascon.xpr
+update_compile_order -fileset sources_1
+close [ open C:/Users/eleves/Desktop/Ascon/Ascon.srcs/sources_1/new/fsm_uart.sv w ]
+add_files C:/Users/eleves/Desktop/Ascon/Ascon.srcs/sources_1/new/fsm_uart.sv
+update_compile_order -fileset sources_1
+close [ open C:/Users/eleves/Desktop/Ascon/Ascon.srcs/sources_1/new/uart_core.v w ]
+add_files C:/Users/eleves/Desktop/Ascon/Ascon.srcs/sources_1/new/uart_core.v
+update_compile_order -fileset sources_1
+export_ip_user_files -of_objects  [get_files C:/Users/eleves/Desktop/Ascon/Ascon.srcs/sources_1/new/uart_core.v] -no_script -reset -force -quiet
+remove_files  C:/Users/eleves/Desktop/Ascon/Ascon.srcs/sources_1/new/uart_core.v
+close [ open C:/Users/eleves/Desktop/Ascon/Ascon.srcs/sources_1/new/uart_core.sv w ]
+add_files C:/Users/eleves/Desktop/Ascon/Ascon.srcs/sources_1/new/uart_core.sv
+update_compile_order -fileset sources_1
+# Disabling source management mode.  This is to allow the top design properties to be set without GUI intervention.
+set_property source_mgmt_mode None [current_project]
+set_property top ascon_top_tb [get_filesets sim_1]
+set_property top_lib xil_defaultlib [get_filesets sim_1]
+# Re-enabling previously disabled source management mode.
+set_property source_mgmt_mode All [current_project]
+update_compile_order -fileset sim_1
+launch_simulation
+open_wave_config C:/Users/eleves/Desktop/Ascon/ascon_top_tb_behav.wcfg
+source ascon_top_tb.tcl
+current_wave_config {ascon_top_tb_behav.wcfg}
+add_wave {{/ascon_top_tb/DUT/clock_i}} {{/ascon_top_tb/DUT/reset_i}} {{/ascon_top_tb/DUT/start_i}} {{/ascon_top_tb/DUT/ctrl_mux_ram_i}} {{/ascon_top_tb/DUT/uart_TX_i}} {{/ascon_top_tb/DUT/init_a_i}} {{/ascon_top_tb/DUT/init_b_i}} {{/ascon_top_tb/DUT/ena_compteur_double_i}} {{/ascon_top_tb/DUT/enable_bloc_counter_i}} {{/ascon_top_tb/DUT/init_bloc_counter_i}} {{/ascon_top_tb/DUT/ena_reg_wave_i}} {{/ascon_top_tb/DUT/ena_reg_ad_i}} {{/ascon_top_tb/DUT/ena_reg_key_i}} {{/ascon_top_tb/DUT/ena_reg_nonce_i}} {{/ascon_top_tb/DUT/ena_RAM_wave_i}} {{/ascon_top_tb/DUT/wea_wave_i}} {{/ascon_top_tb/DUT/data_cipher_o}} {{/ascon_top_tb/DUT/compteur_double_o}} {{/ascon_top_tb/DUT/bloc_counter_o}} {{/ascon_top_tb/DUT/regshift_nonce_s}} {{/ascon_top_tb/DUT/regshift_key_s}} {{/ascon_top_tb/DUT/regshift_ad_s}} {{/ascon_top_tb/DUT/regshift_wave_s}} {{/ascon_top_tb/DUT/init_s}} {{/ascon_top_tb/DUT/key_s}} {{/ascon_top_tb/DUT/nonce_s}} {{/ascon_top_tb/DUT/data_s}} {{/ascon_top_tb/DUT/associate_data_s}} {{/ascon_top_tb/DUT/finalisation_s}} {{/ascon_top_tb/DUT/data_valid_s}} {{/ascon_top_tb/DUT/end_associate_s}} {{/ascon_top_tb/DUT/cipher_s}} {{/ascon_top_tb/DUT/cipher_valid_s}} {{/ascon_top_tb/DUT/tag_s}} {{/ascon_top_tb/DUT/end_tag_s}} {{/ascon_top_tb/DUT/end_initialisation_s}} {{/ascon_top_tb/DUT/end_cipher_s}} {{/ascon_top_tb/DUT/cpt_s}} {{/ascon_top_tb/DUT/reset_counter_s}} {{/ascon_top_tb/DUT/control_counter_s}} {{/ascon_top_tb/DUT/addr_RAM_wave_s}} {{/ascon_top_tb/DUT/data_RAM_wave_s}} {{/ascon_top_tb/DUT/mux_cipher_s}} {{/ascon_top_tb/DUT/addr_RAM_cipher_s}} {{/ascon_top_tb/DUT/addr_mux_cipher_s}} {{/ascon_top_tb/DUT/ena_RAM_cipher_s}} {{/ascon_top_tb/DUT/wea_RAM_cipher_s}} {{/ascon_top_tb/DUT/ena_wave_s}} {{/ascon_top_tb/DUT/wea_wave_s}} 
+run 2000 ns
+run 2000 ns
+relaunch_sim
+run 2000 ns
+relaunch_sim
+close_sim
+launch_simulation
+open_wave_config C:/Users/eleves/Desktop/Ascon/ascon_top_tb_behav.wcfg
+source ascon_top_tb.tcl
+current_wave_config {ascon_top_tb_behav.wcfg}
+add_wave {{/ascon_top_tb/DUT/clock_i}} {{/ascon_top_tb/DUT/reset_i}} {{/ascon_top_tb/DUT/start_i}} {{/ascon_top_tb/DUT/ctrl_mux_ram_i}} {{/ascon_top_tb/DUT/uart_TX_i}} {{/ascon_top_tb/DUT/init_a_i}} {{/ascon_top_tb/DUT/init_b_i}} {{/ascon_top_tb/DUT/ena_compteur_double_i}} {{/ascon_top_tb/DUT/enable_bloc_counter_i}} {{/ascon_top_tb/DUT/init_bloc_counter_i}} {{/ascon_top_tb/DUT/ena_reg_wave_i}} {{/ascon_top_tb/DUT/ena_reg_ad_i}} {{/ascon_top_tb/DUT/ena_reg_key_i}} {{/ascon_top_tb/DUT/ena_reg_nonce_i}} {{/ascon_top_tb/DUT/ena_RAM_wave_i}} {{/ascon_top_tb/DUT/wea_wave_i}} {{/ascon_top_tb/DUT/data_cipher_o}} {{/ascon_top_tb/DUT/compteur_double_o}} {{/ascon_top_tb/DUT/bloc_counter_o}} {{/ascon_top_tb/DUT/regshift_nonce_s}} {{/ascon_top_tb/DUT/regshift_key_s}} {{/ascon_top_tb/DUT/regshift_ad_s}} {{/ascon_top_tb/DUT/regshift_wave_s}} {{/ascon_top_tb/DUT/init_s}} {{/ascon_top_tb/DUT/key_s}} {{/ascon_top_tb/DUT/nonce_s}} {{/ascon_top_tb/DUT/data_s}} {{/ascon_top_tb/DUT/associate_data_s}} {{/ascon_top_tb/DUT/finalisation_s}} {{/ascon_top_tb/DUT/data_valid_s}} {{/ascon_top_tb/DUT/end_associate_s}} {{/ascon_top_tb/DUT/cipher_s}} {{/ascon_top_tb/DUT/cipher_valid_s}} {{/ascon_top_tb/DUT/tag_s}} {{/ascon_top_tb/DUT/end_tag_s}} {{/ascon_top_tb/DUT/end_initialisation_s}} {{/ascon_top_tb/DUT/end_cipher_s}} {{/ascon_top_tb/DUT/cpt_s}} {{/ascon_top_tb/DUT/reset_counter_s}} {{/ascon_top_tb/DUT/control_counter_s}} {{/ascon_top_tb/DUT/addr_RAM_wave_s}} {{/ascon_top_tb/DUT/data_RAM_wave_s}} {{/ascon_top_tb/DUT/mux_cipher_s}} {{/ascon_top_tb/DUT/addr_RAM_cipher_s}} {{/ascon_top_tb/DUT/addr_mux_cipher_s}} {{/ascon_top_tb/DUT/ena_RAM_cipher_s}} {{/ascon_top_tb/DUT/wea_RAM_cipher_s}} {{/ascon_top_tb/DUT/ena_wave_s}} {{/ascon_top_tb/DUT/wea_wave_s}} 
+relaunch_sim
+run 2000 ns
+relaunch_sim
+run 2000 ns
+relaunch_sim
+run 2000 ns
+close_sim
+launch_simulation
+open_wave_config C:/Users/eleves/Desktop/Ascon/ascon_top_tb_behav.wcfg
+source ascon_top_tb.tcl
+current_wave_config {ascon_top_tb_behav.wcfg}
+add_wave {{/ascon_top_tb/clock_s}} {{/ascon_top_tb/reset_s}} {{/ascon_top_tb/start_s}} {{/ascon_top_tb/ctrl_mux_ram_s}} {{/ascon_top_tb/uart_TX_s}} {{/ascon_top_tb/init_a_s}} {{/ascon_top_tb/init_b_s}} {{/ascon_top_tb/ena_compteur_double_s}} {{/ascon_top_tb/enable_bloc_counter_s}} {{/ascon_top_tb/init_bloc_counter_s}} {{/ascon_top_tb/ena_RAM_wave_s}} {{/ascon_top_tb/wea_RAM_wave_s}} {{/ascon_top_tb/data_cipher_s}} {{/ascon_top_tb/compteur_double_s}} {{/ascon_top_tb/bloc_counter_s}} {{/ascon_top_tb/trame_c}} {{/ascon_top_tb/ciphertext_tb}} {{/ascon_top_tb/key_s}} {{/ascon_top_tb/nonce_s}} {{/ascon_top_tb/ad_s}} {{/ascon_top_tb/ena_reg_wave_s}} {{/ascon_top_tb/ena_reg_ad_s}} {{/ascon_top_tb/ena_reg_key_s}} {{/ascon_top_tb/ena_reg_nonce_s}} {{/ascon_top_tb/HALF_PERIOD}} 
+current_wave_config {ascon_top_tb_behav.wcfg}
+add_wave {{/ascon_top_tb/DUT/clock_i}} {{/ascon_top_tb/DUT/reset_i}} {{/ascon_top_tb/DUT/start_i}} {{/ascon_top_tb/DUT/ctrl_mux_ram_i}} {{/ascon_top_tb/DUT/uart_TX_i}} {{/ascon_top_tb/DUT/init_a_i}} {{/ascon_top_tb/DUT/init_b_i}} {{/ascon_top_tb/DUT/ena_compteur_double_i}} {{/ascon_top_tb/DUT/enable_bloc_counter_i}} {{/ascon_top_tb/DUT/init_bloc_counter_i}} {{/ascon_top_tb/DUT/ena_reg_wave_i}} {{/ascon_top_tb/DUT/ena_reg_ad_i}} {{/ascon_top_tb/DUT/ena_reg_key_i}} {{/ascon_top_tb/DUT/ena_reg_nonce_i}} {{/ascon_top_tb/DUT/ena_RAM_wave_i}} {{/ascon_top_tb/DUT/wea_RAM_wave_i}} {{/ascon_top_tb/DUT/data_cipher_o}} {{/ascon_top_tb/DUT/compteur_double_o}} {{/ascon_top_tb/DUT/bloc_counter_o}} {{/ascon_top_tb/DUT/regshift_nonce_s}} {{/ascon_top_tb/DUT/regshift_key_s}} {{/ascon_top_tb/DUT/regshift_ad_s}} {{/ascon_top_tb/DUT/regshift_wave_s}} {{/ascon_top_tb/DUT/init_s}} {{/ascon_top_tb/DUT/key_s}} {{/ascon_top_tb/DUT/nonce_s}} {{/ascon_top_tb/DUT/data_s}} {{/ascon_top_tb/DUT/associate_data_s}} {{/ascon_top_tb/DUT/finalisation_s}} {{/ascon_top_tb/DUT/data_valid_s}} {{/ascon_top_tb/DUT/end_associate_s}} {{/ascon_top_tb/DUT/cipher_s}} {{/ascon_top_tb/DUT/cipher_valid_s}} {{/ascon_top_tb/DUT/tag_s}} {{/ascon_top_tb/DUT/end_tag_s}} {{/ascon_top_tb/DUT/end_initialisation_s}} {{/ascon_top_tb/DUT/end_cipher_s}} {{/ascon_top_tb/DUT/cpt_s}} {{/ascon_top_tb/DUT/reset_counter_s}} {{/ascon_top_tb/DUT/control_counter_s}} {{/ascon_top_tb/DUT/addr_RAM_wave_s}} {{/ascon_top_tb/DUT/data_RAM_wave_s}} {{/ascon_top_tb/DUT/mux_cipher_s}} {{/ascon_top_tb/DUT/addr_RAM_cipher_s}} {{/ascon_top_tb/DUT/addr_mux_cipher_s}} {{/ascon_top_tb/DUT/ena_RAM_cipher_s}} {{/ascon_top_tb/DUT/wea_RAM_cipher_s}} 
+relaunch_sim
+relaunch_sim
+relaunch_sim
+relaunch_sim
+relaunch_sim
+relaunch_sim
+run 2000 ns
+relaunch_sim
+relaunch_sim
+relaunch_sim
+relaunch_sim
+relaunch_sim
+relaunch_sim
+run 2000 ns
+relaunch_sim
+close_sim
