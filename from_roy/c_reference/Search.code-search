@@ -1,0 +1,5 @@
+# Query: 
+# ContextLines: 1
+
+gcc -o test_ascon test_ascon.c ascon.c
+./test_ascon
