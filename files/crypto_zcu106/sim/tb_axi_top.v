@@ -49,7 +49,7 @@ module tb_axi_top;
     wire            rvalid;
     reg             rready  = 0;
 
-    wire led_pass, led_fail;
+    wire [7:0] led;
     reg  [1:0] btn = 2'b00;
 
     crypto_axi_top #(
@@ -79,8 +79,7 @@ module tb_axi_top;
         .s_axi_rvalid  (rvalid),
         .s_axi_rready  (rready),
         .btn           (btn),
-        .led_pass      (led_pass),
-        .led_fail      (led_fail)
+        .led           (led)
     );
 
     integer errors  = 0;
@@ -304,6 +303,29 @@ module tb_axi_top;
         if (rd_val[1:0] === 2'b11) $display("  PASS LED register readback");
         else begin
             $display("  FAIL LED register readback = %08h", rd_val);
+            errors = errors + 1;
+        end
+        vectors = vectors + 1;
+
+        // -- LED bar outputs --
+        // Pass lights all eight, fail darkens all eight. Both are static
+        // states, so unlike idle and running they can be checked directly
+        // without waiting on the blink counter; status_led registers the bar
+        // one clock after the status write, so a few edges is plenty.
+        axi_write(REG_LED, 32'h1);
+        repeat (4) @(posedge clk);
+        if (led === 8'hFF) $display("  PASS LED bar all on for pass");
+        else begin
+            $display("  FAIL LED bar = %02h for pass (expected ff)", led);
+            errors = errors + 1;
+        end
+        vectors = vectors + 1;
+
+        axi_write(REG_LED, 32'h2);
+        repeat (4) @(posedge clk);
+        if (led === 8'h00) $display("  PASS LED bar all off for fail");
+        else begin
+            $display("  FAIL LED bar = %02h for fail (expected 00)", led);
             errors = errors + 1;
         end
         vectors = vectors + 1;

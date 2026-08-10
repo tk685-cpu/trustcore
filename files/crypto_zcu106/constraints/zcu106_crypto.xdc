@@ -16,7 +16,7 @@
 # a deliberate benefit of putting the master in the PL rather than routing the
 # chip's SPI pins off-board.
 #
-# That leaves the two LED outputs and the two pushbutton inputs.
+# That leaves the eight LED outputs and the two pushbutton inputs.
 #
 # -----------------------------------------------------------------------------
 # PIN ASSIGNMENTS
@@ -26,9 +26,10 @@
 # against that revision's master file.
 #
 # The ZCU106 user LEDs are single colour, not RGB, so "red vs green" is not
-# available on the board itself. The mapping below uses two separate LEDs plus
-# distinct blink rates. To get actual colours, wire a bi-colour LED to a user
-# PMOD header and move these constraints to those pins.
+# available on the board itself. Instead all eight are driven together as one
+# bar and the verdict is read from how many are lit: the whole row solid on is
+# a pass, the whole row dark is a fail. To get actual colours, wire a bi-colour
+# LED to a user PMOD header and move these constraints to those pins.
 #
 # -----------------------------------------------------------------------------
 # PORT NAMES MUST MATCH THE TOP LEVEL
@@ -39,39 +40,49 @@
 # inside crypto_axi_top.v.
 #
 # WATCH OUT: right-clicking a pin and choosing "Make External" usually appends
-# an instance suffix, so led_pass becomes led_pass_0 and btn becomes btn_0.
-# The build then fails with "No objects matched 'get_ports led_pass'". Fix it
-# in the block design, not here: click the external port, and in the External
-# Port Properties panel set Name back to led_pass / led_fail / btn. Keeping the
-# BD port names equal to the RTL port names avoids a whole class of confusion.
+# an instance suffix, so led becomes led_0 and btn becomes btn_0. The build then
+# fails with "No objects matched 'get_ports led'". Fix it in the block design,
+# not here: click the external port, and in the External Port Properties panel
+# set Name back to led / btn. Keeping the BD port names equal to the RTL port
+# names avoids a whole class of confusion.
 #
 # Check them with this in the Tcl console after opening the synthesized design:
 #     get_ports *
-# The list must contain exactly led_pass, led_fail, btn[0] and btn[1].
+# The list must contain exactly led[0]..led[7], btn[0] and btn[1].
 #
-# The pushbuttons are ONE 2-bit port, not two scalars:
-#     btn[0] = GPIO_SW_W -> Ascon-128
-#     btn[1] = GPIO_SW_E -> SHA-256
-# The braces around {btn[0]} are required: without them Tcl treats the brackets
-# as command substitution and the constraint fails.
+# Both the LEDs and the pushbuttons are ONE vector port each, not a pile of
+# scalars:
+#     led[7:0] = GPIO_LED_7_LS .. GPIO_LED_0_LS
+#     btn[0]   = GPIO_SW_W -> Ascon-128
+#     btn[1]   = GPIO_SW_E -> SHA-256
+# The braces around {btn[0]} and {led[0]} are required: without them Tcl treats
+# the brackets as command substitution and the constraint fails.
 # =============================================================================
 
 # -----------------------------------------------------------------------------
 # User LEDs
 #
-# GPIO_LED_0_LS / GPIO_LED_1_LS, bank 66, VCCO = VCC1V2 so LVCMOS12.
-# Note for later expansion: LEDs 0, 1, 2, 4, 5, 6, 7 are all in bank 66, but
-# GPIO_LED_3_LS is AE15 in bank 64. If you ever use LED 3, confirm bank 64's
-# VCCO on your board before assuming LVCMOS12 is still correct there.
+# All eight user LEDs are driven together as one bar, so the whole row is solid
+# on for pass and completely dark for fail. led[n] maps to GPIO_LED_n_LS.
+#
+# LEDs 0, 1, 2, 4, 5, 6 and 7 are in bank 66; GPIO_LED_3_LS is the odd one out
+# in bank 64. Both banks are VCCO = VCC1V2 on this board, so LVCMOS12 is correct
+# for all eight -- confirmed against the Rev1.0 master XDC, which lists LED_3 at
+# AE15 with IOSTANDARD LVCMOS12 just like the rest.
 # -----------------------------------------------------------------------------
-set_property -dict {PACKAGE_PIN AL11 IOSTANDARD LVCMOS12} [get_ports led_pass]
-set_property -dict {PACKAGE_PIN AL13 IOSTANDARD LVCMOS12} [get_ports led_fail]
+set_property -dict {PACKAGE_PIN AL11 IOSTANDARD LVCMOS12} [get_ports {led[0]}] ;# GPIO_LED_0_LS  bank 66
+set_property -dict {PACKAGE_PIN AL13 IOSTANDARD LVCMOS12} [get_ports {led[1]}] ;# GPIO_LED_1_LS  bank 66
+set_property -dict {PACKAGE_PIN AK13 IOSTANDARD LVCMOS12} [get_ports {led[2]}] ;# GPIO_LED_2_LS  bank 66
+set_property -dict {PACKAGE_PIN AE15 IOSTANDARD LVCMOS12} [get_ports {led[3]}] ;# GPIO_LED_3_LS  bank 64
+set_property -dict {PACKAGE_PIN AM8  IOSTANDARD LVCMOS12} [get_ports {led[4]}] ;# GPIO_LED_4_LS  bank 66
+set_property -dict {PACKAGE_PIN AM9  IOSTANDARD LVCMOS12} [get_ports {led[5]}] ;# GPIO_LED_5_LS  bank 66
+set_property -dict {PACKAGE_PIN AM10 IOSTANDARD LVCMOS12} [get_ports {led[6]}] ;# GPIO_LED_6_LS  bank 66
+set_property -dict {PACKAGE_PIN AM11 IOSTANDARD LVCMOS12} [get_ports {led[7]}] ;# GPIO_LED_7_LS  bank 66
 
 # The LEDs are human-visible indicators driven from a slow counter. They have
 # no meaningful timing relationship to anything, so exclude them from timing
 # analysis rather than letting unconstrained-output warnings clutter the report.
-set_false_path -to [get_ports led_pass]
-set_false_path -to [get_ports led_fail]
+set_false_path -to [get_ports {led[*]}]
 
 # -----------------------------------------------------------------------------
 # User pushbuttons

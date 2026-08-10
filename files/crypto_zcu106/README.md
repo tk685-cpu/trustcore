@@ -188,20 +188,36 @@ so the indication keeps running even if the application stops or crashes.
 
 ### On the LEDs
 
-You asked for red on failure and green on success. **The ZCU106 user LEDs are a
-bank of single-colour LEDs, not RGB**, so literal red and green are not
-available on the board itself. Two options:
+**The ZCU106 user LEDs are a bank of single-colour LEDs, not RGB**, so literal
+red and green are not available on the board itself. Rather than pick two LEDs
+and rely on remembering which is which, all eight are driven together as one
+bar, and the verdict is read from how many are lit:
 
-1. Use two different user LEDs, told apart by position and blink rate. That is
-   what the XDC does by default: `LED_PASS` solid on for success, `LED_FAIL`
-   blinking fast for failure.
-2. Wire a bi-colour or RGB LED to one of the user PMOD headers and move the two
-   constraints to those pins. The RTL needs no changes.
+| status | all 8 GPIO LEDs | meaning |
+|---|---|---|
+| idle | slow pulse — 168 ms on every 2.7 s (~0.38 Hz) | alive, waiting for a button |
+| running | fast even blink — 84 ms on / 84 ms off (~6 Hz) | test in progress |
+| pass | **solid on** | every vector matched |
+| fail | **all dark** | something mismatched |
 
-Also: **verify the LED package pins against the master XDC for your board
-revision** before building. There are several ZCU106 revisions. If the pins are
-wrong the design still builds and the LEDs simply never light, which is a
-frustrating thing to debug.
+Anything moving means "no verdict yet"; anything static is the answer. The two
+moving states are 16x apart in rate, so a lone pulse every few seconds is never
+going to read as a fast strobe.
+
+Idle deliberately pulses instead of sitting dark. Fail is dark and steady, and
+the board sits in idle indefinitely between runs — so if idle were dark too, a
+board waiting at the menu, a crashed application and a bitstream that never
+programmed would all look exactly like a failing test.
+
+If you want actual colour, wire a bi-colour or RGB LED to a user PMOD header
+and drive it from any bit of `led[7:0]`. The RTL needs no changes.
+
+The package pins are in `constraints/zcu106_crypto.xdc`, taken from the
+**ZCU106 Rev1.0 master XDC** (`led[n]` -> `GPIO_LED_n_LS`). Seven of the eight
+are in bank 66; `GPIO_LED_3_LS` is in bank 64. Both banks are VCCO = VCC1V2, so
+LVCMOS12 is correct for all eight. **If you are on a different board revision,
+re-check against that revision's master file** — wrong pins still build, the
+LEDs simply never light, which is a frustrating thing to debug.
 
 ---
 
@@ -238,20 +254,28 @@ Requires `iverilog`, `python3`, and optionally `verilator` for the lint step.
 ## 3a. Updating an existing Vivado project
 
 Copying the new files over the old ones is not sufficient on its own, because
-two things changed structurally.
+the top-level port list changed.
 
 1. **`rtl_fpga/button_ctrl.v` is a new file.** Replacing files does not add it.
    In Vivado: Add Sources, select it, and leave "Copy sources into project"
    unchecked as before. Check Sources -> Hierarchy afterwards: `button_ctrl`
    must appear under `crypto_axi_top`, with no black box.
 
-2. **`crypto_axi_top` gained a `btn` port.** A block design cell caches the
-   module's port list, so an existing cell will not show the new pin. Fix it
-   with right-click the `crypto_0` cell -> **Refresh Module**. If that leaves
-   the cell in an error state, delete it and re-add via Add Module, then re-run
-   connection automation on `s_axi`.
+2. **`crypto_axi_top` gained a `btn` port, and `led_pass` / `led_fail` were
+   replaced by a single 8-bit `led` port.** A block design cell caches the
+   module's port list, so an existing cell will show neither the new pins nor
+   the removal of the old ones. Fix it with right-click the `crypto_0` cell ->
+   **Refresh Module**. If that leaves the cell in an error state, delete it and
+   re-add via Add Module, then re-run connection automation on `s_axi`.
 
-3. **Make `btn` external** and check the port name (see the warning below).
+3. **Delete the old `led_pass` and `led_fail` external ports.** They no longer
+   have anything to connect to. Leaving them behind gives you either a
+   validation error or two unconnected top-level ports that the XDC no longer
+   constrains.
+
+4. **Make `btn` and `led` external** and check the port names (see the warning
+   below). `led` must come out as one 8-bit port `led[7:0]`, not as eight
+   scalars — the XDC constrains `{led[0]}` through `{led[7]}`.
 
 Then Validate Design, regenerate the HDL wrapper if prompted, and rebuild. In
 Vitis, re-import the XSA or update the hardware platform so `xparameters.h`
@@ -264,8 +288,8 @@ rebuild in five minutes.
 ### Watch out: "Make External" renames ports
 
 Right-clicking a pin and choosing Make External usually appends an instance
-suffix, so `led_pass` becomes `led_pass_0` and `btn` becomes `btn_0`. The build
-then fails with `No objects matched 'get_ports led_pass'`.
+suffix, so `led` becomes `led_0` and `btn` becomes `btn_0`. The build then fails
+with `No objects matched 'get_ports led'`.
 
 Fix it in the block design rather than in the XDC: click the external port and
 set Name back in the External Port Properties panel. Keeping the block design
@@ -278,7 +302,7 @@ Verify with this in the Tcl console after opening the synthesized design:
 get_ports *
 ```
 
-The list must contain exactly `led_pass`, `led_fail`, `btn[0]` and `btn[1]`.
+The list must contain exactly `led[0]`..`led[7]`, `btn[0]` and `btn[1]`.
 
 ## 4. Building it
 
@@ -306,9 +330,9 @@ starting point. If it fails, build by hand: it is six steps.
    the AXI4-Lite interface from the `s_axi_*` port names.
 5. Run connection automation on `crypto_0/s_axi`. That inserts the interconnect
    and reset block and wires the clocks.
-6. Right-click `led_pass`, `led_fail` and `btn`, Make External. Port names must
-   come out exactly as `led_pass`, `led_fail` and `btn`. Then Address Editor,
-   Assign All. Validate, create HDL wrapper, generate bitstream.
+6. Right-click `led` and `btn`, Make External. Port names must come out exactly
+   as `led` and `btn` — `led` is one 8-bit port, not eight scalars. Then Address
+   Editor, Assign All. Validate, create HDL wrapper, generate bitstream.
 
 Note the base address from the Address Editor. You will need it in the next
 step.
@@ -368,11 +392,10 @@ reset the MPSoC and are not routed to the PL at all. The user pushbuttons are
 SW14 to SW18, the 5-way navigation switch, which appear in the master XDC as
 `GPIO_SW_N` / `S` / `E` / `W` / `C`.
 
-**You must fill in two pins before building.** `constraints/zcu106_crypto.xdc`
-contains deliberately invalid placeholders for `GPIO_SW_W` and `GPIO_SW_E`, so
-the build stops with a clear error rather than producing a bitstream whose
-buttons silently do nothing. Look them up in the master XDC the same way you
-did for the LEDs.
+The pins are already filled in, taken from the Rev1.0 master XDC: `GPIO_SW_W` is
+`AK12` and `GPIO_SW_E` is `AC14`, both bank 66 at LVCMOS12. If you are on a
+different board revision, re-check them against that revision's master file the
+same way you would the LEDs.
 
 ### Why "both" works at all
 
@@ -457,7 +480,7 @@ rtl/                  ASIC deliverable, unchanged interface
 rtl_fpga/             FPGA-only scaffolding, do not tape out
   crypto_axi_top.v    AXI4-Lite peripheral, reset synchronizer
   spi_master_lite.v   SPI Mode 0 master
-  status_led.v        blink patterns
+  status_led.v        blink patterns, drives all 8 LEDs as one bar
   button_ctrl.v       debounce and multi-press detection
 
 constraints/zcu106_crypto.xdc
@@ -470,9 +493,9 @@ sim/                  testbenches and the Python golden reference
 
 ## 9. Things to watch
 
-- **Verify the LED pins** and **fill in the two button pins** against the master
-  XDC for your board revision. The button pins are placeholders and will stop
-  the build until you replace them.
+- **All pin assignments come from the ZCU106 Rev1.0 master XDC.** If your board
+  is a different revision, re-check the eight LED pins and the two button pins
+  against that revision's master file before building.
 - **The Tcl script is untested.** The RTL and C are not.
 - **Ascon plaintext is capped at 16 bytes** by the result bus width, not by the
   core. If you need 32, the result readback has to grow to 48 bytes and both

@@ -9,7 +9,7 @@
 //                            |                                            |
 //                            +------------- status ---------------------- +
 //                            |
-//                            +--> status_led --> board LEDs
+//                            +--> status_led --> all 8 board LEDs
 //
 // -----------------------------------------------------------------------------
 // REGISTER MAP (offsets from the base address assigned in the block design)
@@ -107,8 +107,9 @@ module crypto_axi_top #(
     input  wire [1:0]                          btn,
 
     // ---- Board LEDs ----
-    output wire                                led_pass,
-    output wire                                led_fail
+    // All eight ZCU106 user LEDs, driven together as one bar: solid on = pass,
+    // all dark = fail. See status_led.v for the full pattern table.
+    output wire [7:0]                          led
 );
     /* verilator lint_on UNUSEDSIGNAL */
 
@@ -399,11 +400,10 @@ module crypto_axi_top #(
     // Board LEDs
     // =========================================================================
     status_led #(.CLK_HZ(CLK_HZ)) u_led (
-        .clk      (clk),
-        .rst_n    (rst_n),
-        .status   (led_status_r),
-        .led_pass (led_pass),
-        .led_fail (led_fail)
+        .clk    (clk),
+        .rst_n  (rst_n),
+        .status (led_status_r),
+        .led    (led)
     );
 
 endmodule

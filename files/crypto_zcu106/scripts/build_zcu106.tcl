@@ -134,11 +134,12 @@ apply_bd_automation -rule xilinx.com:bd_rule:axi4 \
 
 #-----------------------------------------------------------------------------
 # LEDs out to the pins named in the XDC
+#
+# One 8-bit port: led[n] -> GPIO_LED_n_LS. All eight are driven together, so a
+# pass lights the whole row and a fail leaves it dark.
 #-----------------------------------------------------------------------------
-create_bd_port -dir O led_pass
-create_bd_port -dir O led_fail
-connect_bd_net [get_bd_pins crypto_0/led_pass] [get_bd_ports led_pass]
-connect_bd_net [get_bd_pins crypto_0/led_fail] [get_bd_ports led_fail]
+create_bd_port -dir O -from 7 -to 0 led
+connect_bd_net [get_bd_pins crypto_0/led] [get_bd_ports led]
 
 # Pushbuttons in: btn[0] = GPIO_SW_W (Ascon), btn[1] = GPIO_SW_E (SHA-256)
 create_bd_port -dir I -from 1 -to 0 btn

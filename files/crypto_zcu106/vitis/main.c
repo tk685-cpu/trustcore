@@ -15,11 +15,17 @@
  * NOTE: SW3 and SW4 on this board are SRST_B and POR_B. They reset the MPSoC
  * and must not be used as user inputs.
  *
- * LEDs:
+ * LEDs: all eight user LEDs are driven together as one bar.
  *
- *     running : both LEDs blinking alternately
- *     pass    : LED_PASS solid on
- *     fail    : LED_FAIL blinking fast
+ *     idle    : slow pulse, 168 ms on every 2.7 s  (alive, waiting)
+ *     running : fast even blink, ~6 Hz             (test in progress)
+ *     pass    : ALL EIGHT SOLID ON
+ *     fail    : ALL EIGHT DARK
+ *
+ * Idle and running are 16x apart in rate so they cannot be confused, and the
+ * two verdicts are the two extremes. Idle pulses rather than sitting dark so
+ * that a board waiting at the menu can be told apart from a failing run and
+ * from a bitstream that never programmed.
  *
  * The blink patterns are generated in hardware, so the indication keeps
  * running even if this application stops.
@@ -457,10 +463,10 @@ int main(void)
         xil_printf(" ran: %d   passed: %d   failed: %d\r\n",
                    ran, ran - fail, fail);
         if (fail == 0) {
-            xil_printf(" RESULT: ALL PASS  (LED_PASS solid)\r\n");
+            xil_printf(" RESULT: ALL PASS  (all 8 LEDs solid on)\r\n");
             WR(REG_LED, LED_PASS);
         } else {
-            xil_printf(" RESULT: FAILURES  (LED_FAIL blinking)\r\n");
+            xil_printf(" RESULT: FAILURES  (all 8 LEDs dark)\r\n");
             WR(REG_LED, LED_FAIL);
         }
         xil_printf("=====================================================\r\n");
