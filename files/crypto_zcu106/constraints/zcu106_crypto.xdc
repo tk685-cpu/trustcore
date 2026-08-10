@@ -139,23 +139,37 @@ set_false_path -from [get_ports {btn[1]}]
 # If spi_slave.v ever stops being an ASIC deliverable, move these to RTL
 # attributes as well and delete this whole block.
 # -----------------------------------------------------------------------------
-foreach async_pat {
-    *u_spi_slave*sclk_s1*
-    *u_spi_slave*sclk_s2*
-    *u_spi_slave*sclk_s3*
-    *u_spi_slave*mosi_s1*
-    *u_spi_slave*mosi_s2*
-    *u_spi_slave*cs_s1*
-    *u_spi_slave*cs_s2*
-} {
-    set async_cells [get_cells -quiet -hierarchical \
-        -filter "REF_NAME =~ FD* && NAME =~ $async_pat"]
-    if {[llength $async_cells] > 0} {
-        set_property ASYNC_REG TRUE $async_cells
-    } else {
-        puts "zcu106_crypto.xdc: WARNING no registers matched $async_pat"
-    }
-}
+# DISABLED: Vivado rejects control flow (foreach / if) inside a .xdc file with
+# "command foreach is not supported in the xdc constraint file". Only constraint
+# commands and simple expressions are legal here.
+#
+# This block is a no-op for correctness in the FPGA build: as noted above, the
+# SPI master and slave share one clock here, so these chains do not cross a
+# domain and ASYNC_REG buys nothing. The two crossings that ARE asynchronous
+# (reset synchronizer in crypto_axi_top, button synchronizer in button_ctrl)
+# carry (* ASYNC_REG = "TRUE" *) in the RTL and are unaffected by this.
+#
+# The loop is preserved verbatim in constraints/async_reg.tcl. To re-enable it,
+# add that file to the constraints fileset and set its type to TCL (Vivado
+# sources .tcl constraint files as full Tcl, where foreach is legal).
+#
+# foreach async_pat {
+#     *u_spi_slave*sclk_s1*
+#     *u_spi_slave*sclk_s2*
+#     *u_spi_slave*sclk_s3*
+#     *u_spi_slave*mosi_s1*
+#     *u_spi_slave*mosi_s2*
+#     *u_spi_slave*cs_s1*
+#     *u_spi_slave*cs_s2*
+# } {
+#     set async_cells [get_cells -quiet -hierarchical \
+#         -filter "REF_NAME =~ FD* && NAME =~ $async_pat"]
+#     if {[llength $async_cells] > 0} {
+#         set_property ASYNC_REG TRUE $async_cells
+#     } else {
+#         puts "zcu106_crypto.xdc: WARNING no registers matched $async_pat"
+#     }
+# }
 
 # -----------------------------------------------------------------------------
 # Bitstream settings
