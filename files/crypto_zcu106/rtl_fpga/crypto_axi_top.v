@@ -37,6 +37,16 @@
 //
 //   0x10  LED      RW  [1:0]   00 idle, 01 pass, 10 fail, 11 running
 //
+//   0x14  BTN      RO  [1:0]   live debounced button state
+//                      [3:2]   latched event code: 01 = W (Ascon),
+//                              10 = E (SHA-256), 11 = both
+//                      [4]     event pending
+//                      [9:8]   RAW pin state, before polarity normalisation
+//                              (use this to confirm button polarity on the
+//                               bench: press a button and see which way it
+//                               moves)
+//                  WO  [4]     write 1 to acknowledge and clear the event
+//
 // -----------------------------------------------------------------------------
 // USAGE SEQUENCE (see the Vitis application for the concrete code)
 //   1. write CTRL   = {sclk_div, cs_n=1}
@@ -90,6 +100,12 @@ module crypto_axi_top #(
     output wire                                s_axi_rvalid,
     input  wire                                s_axi_rready,
 
+    // ---- Board pushbuttons (ZCU106 5-way switch) ----
+    // btn[0] = GPIO_SW_W  -> run the Ascon-128 vectors
+    // btn[1] = GPIO_SW_E  -> run the SHA-256 vectors
+    // both within a quarter second -> run everything
+    input  wire [1:0]                          btn,
+
     // ---- Board LEDs ----
     output wire                                led_pass,
     output wire                                led_fail
@@ -117,7 +133,8 @@ module crypto_axi_top #(
     // same style chip_top uses internally. Mixing synchronous and
     // asynchronous reset on the same net is worse than either on its own.
     // =========================================================================
-    reg rst_meta, rst_sync_n;
+    (* ASYNC_REG = "TRUE" *) reg rst_meta;
+    (* ASYNC_REG = "TRUE" *) reg rst_sync_n;
 
     always @(posedge clk or negedge s_axi_aresetn) begin
         if (!s_axi_aresetn) begin
@@ -249,6 +266,12 @@ module crypto_axi_top #(
     reg [7:0]  tx_data_r;
     reg        spi_start;
     reg [1:0]  led_status_r;
+    reg [1:0]  btn_evt_code_r;
+    reg        btn_evt_pending;
+
+    wire [1:0] btn_state;
+    wire [1:0] btn_evt_code;
+    wire       btn_evt_valid;
 
     wire [7:0] spi_rx_data;
     wire       spi_busy;
@@ -261,8 +284,17 @@ module crypto_axi_top #(
             tx_data_r    <= 8'd0;
             spi_start    <= 1'b0;
             led_status_r <= 2'b00;
+            btn_evt_code_r  <= 2'b00;
+            btn_evt_pending <= 1'b0;
         end else begin
             spi_start <= 1'b0;            // single-cycle pulse
+
+            // A new press always wins over a simultaneous software
+            // acknowledge, so an event can never be silently dropped.
+            if (btn_evt_valid) begin
+                btn_evt_code_r  <= btn_evt_code;
+                btn_evt_pending <= 1'b1;
+            end
 
             if (slv_wren) begin
                 case (axi_awaddr_r[ADDR_LSB+2:ADDR_LSB])
@@ -278,6 +310,10 @@ module crypto_axi_top #(
                     end
                     3'd4: begin                       // 0x10 LED
                         if (s_axi_wstrb[0]) led_status_r <= s_axi_wdata[1:0];
+                    end
+                    3'd5: begin                       // 0x14 BTN (acknowledge)
+                        if (s_axi_wstrb[0] && s_axi_wdata[4] && !btn_evt_valid)
+                            btn_evt_pending <= 1'b0;
                     end
                     default: ;                        // ID is read-only
                 endcase
@@ -297,6 +333,11 @@ module crypto_axi_top #(
                 3'd3: axi_rdata <= {28'd0, chip_err, chip_result_ready,
                                            chip_busy, spi_busy};
                 3'd4: axi_rdata <= {30'd0, led_status_r};
+                3'd5: axi_rdata <= {22'd0, btn,              // [9:8] raw pins
+                                           3'd0,
+                                           btn_evt_pending,  // [4]
+                                           btn_evt_code_r,   // [3:2]
+                                           btn_state};       // [1:0]
                 default: axi_rdata <= 32'd0;
             endcase
         end
@@ -331,6 +372,27 @@ module crypto_axi_top #(
         .busy         (chip_busy),
         .result_ready (chip_result_ready),
         .err          (chip_err)
+    );
+
+    // =========================================================================
+    // Pushbuttons
+    //
+    // ACTIVE_HIGH is set for the ZCU106 5-way switch. If the raw bits in the
+    // BTN register read as 1 when nothing is pressed, flip this to 0 and
+    // rebuild -- that is the only change needed.
+    // =========================================================================
+    button_ctrl #(
+        .CLK_HZ      (CLK_HZ),
+        .DEBOUNCE_MS (10),
+        .WINDOW_MS   (250),
+        .ACTIVE_HIGH (1)
+    ) u_btn (
+        .clk       (clk),
+        .rst_n     (rst_n),
+        .btn_raw   (btn),
+        .btn_state (btn_state),
+        .evt_code  (btn_evt_code),
+        .evt_valid (btn_evt_valid)
     );
 
     // =========================================================================

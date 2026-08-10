@@ -140,6 +140,10 @@ create_bd_port -dir O led_fail
 connect_bd_net [get_bd_pins crypto_0/led_pass] [get_bd_ports led_pass]
 connect_bd_net [get_bd_pins crypto_0/led_fail] [get_bd_ports led_fail]
 
+# Pushbuttons in: btn[0] = GPIO_SW_W (Ascon), btn[1] = GPIO_SW_E (SHA-256)
+create_bd_port -dir I -from 1 -to 0 btn
+connect_bd_net [get_bd_ports btn] [get_bd_pins crypto_0/btn]
+
 #-----------------------------------------------------------------------------
 # Address map, validate, wrapper
 #-----------------------------------------------------------------------------

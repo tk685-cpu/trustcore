@@ -211,10 +211,11 @@ Everything below was actually run, not asserted.
 
 | Test | What it covers | Result |
 |---|---|---|
+| `button_unit` | debounce, both-press window, hold, glitch rejection | pass |
 | `sha256_unit` | 36 vectors, every length 0 to 32, against Python `hashlib` | pass |
 | `ascon_unit` | 37 vectors, every length 0 to 32 plus AD cases | pass |
 | `chip_e2e` | 29 vectors through the real SPI pins, plus rejection and abort tests | pass |
-| `axi_stack` | 12 vectors through a real AXI4-Lite bus-functional model | pass |
+| `axi_stack` | 12 vectors plus 3 button events through a real AXI4-Lite bus-functional model | pass |
 | `sclk_margin` | SCLK rate sweep to find the actual failure point | see table above |
 | lint | Verilator `-Wall` on both `chip_top` and `crypto_axi_top` | clean |
 | C build | `gcc -Wall -Wextra` on the Vitis application | clean |
@@ -226,17 +227,58 @@ tag `E355159F292911F794CB1432A0103A8A`.
 Run it all:
 
 ```bash
-bash scripts/run_sim.sh
+cd scripts
+./run_sim.sh
 ```
 
-Requires `iverilog` and `python3`; `verilator` is optional and only used for
-the lint step. On Ubuntu: `sudo apt install iverilog verilator`.
-
-The script regenerates every vector from the Python golden reference before it
-runs, so the `.vh` files are build artefacts rather than checked-in data. It
-exits non-zero if anything regresses.
+Requires `iverilog`, `python3`, and optionally `verilator` for the lint step.
 
 ---
+
+## 3a. Updating an existing Vivado project
+
+Copying the new files over the old ones is not sufficient on its own, because
+two things changed structurally.
+
+1. **`rtl_fpga/button_ctrl.v` is a new file.** Replacing files does not add it.
+   In Vivado: Add Sources, select it, and leave "Copy sources into project"
+   unchecked as before. Check Sources -> Hierarchy afterwards: `button_ctrl`
+   must appear under `crypto_axi_top`, with no black box.
+
+2. **`crypto_axi_top` gained a `btn` port.** A block design cell caches the
+   module's port list, so an existing cell will not show the new pin. Fix it
+   with right-click the `crypto_0` cell -> **Refresh Module**. If that leaves
+   the cell in an error state, delete it and re-add via Add Module, then re-run
+   connection automation on `s_axi`.
+
+3. **Make `btn` external** and check the port name (see the warning below).
+
+Then Validate Design, regenerate the HDL wrapper if prompted, and rebuild. In
+Vitis, re-import the XSA or update the hardware platform so `xparameters.h`
+matches, then rebuild the application.
+
+If any of that turns messy, deleting the project and re-running from step 3 is
+faster than untangling it. Nothing is stored in the project that you cannot
+rebuild in five minutes.
+
+### Watch out: "Make External" renames ports
+
+Right-clicking a pin and choosing Make External usually appends an instance
+suffix, so `led_pass` becomes `led_pass_0` and `btn` becomes `btn_0`. The build
+then fails with `No objects matched 'get_ports led_pass'`.
+
+Fix it in the block design rather than in the XDC: click the external port and
+set Name back in the External Port Properties panel. Keeping the block design
+port names identical to the RTL port names avoids a whole class of confusion
+later.
+
+Verify with this in the Tcl console after opening the synthesized design:
+
+```tcl
+get_ports *
+```
+
+The list must contain exactly `led_pass`, `led_fail`, `btn[0]` and `btn[1]`.
 
 ## 4. Building it
 
@@ -264,7 +306,8 @@ starting point. If it fails, build by hand: it is six steps.
    the AXI4-Lite interface from the `s_axi_*` port names.
 5. Run connection automation on `crypto_0/s_axi`. That inserts the interconnect
    and reset block and wires the clocks.
-6. Right-click `led_pass` and `led_fail`, Make External. Then Address Editor,
+6. Right-click `led_pass`, `led_fail` and `btn`, Make External. Port names must
+   come out exactly as `led_pass`, `led_fail` and `btn`. Then Address Editor,
    Assign All. Validate, create HDL wrapper, generate bitstream.
 
 Note the base address from the Address Editor. You will need it in the next
@@ -309,6 +352,54 @@ in.
 
 ---
 
+## 5a. Pushbutton control
+
+Press a button on the ZCU106 5-way switch to run a test suite. No laptop needed
+once the bitstream and application are loaded.
+
+| Button | Action |
+|---|---|
+| `GPIO_SW_W` | Ascon-128 vectors |
+| `GPIO_SW_E` | SHA-256 vectors |
+| both within 250 ms | everything, plus rejection and recovery checks |
+
+**Do not use SW3 or SW4.** On the ZCU106 those are `SRST_B` and `POR_B`: they
+reset the MPSoC and are not routed to the PL at all. The user pushbuttons are
+SW14 to SW18, the 5-way navigation switch, which appear in the master XDC as
+`GPIO_SW_N` / `S` / `E` / `W` / `C`.
+
+**You must fill in two pins before building.** `constraints/zcu106_crypto.xdc`
+contains deliberately invalid placeholders for `GPIO_SW_W` and `GPIO_SW_E`, so
+the build stops with a clear error rather than producing a bitstream whose
+buttons silently do nothing. Look them up in the master XDC the same way you
+did for the LEDs.
+
+### Why "both" works at all
+
+Nobody presses two buttons on the same clock cycle, or even in the same
+millisecond, so sampling for "both down simultaneously" would essentially never
+fire. Instead the first press opens a 250 ms collection window; whatever is
+pressed during that window is OR-ed together and reported once when it closes.
+Press one button and you get that one. Add the second within a quarter second
+and you get both. `tb_button.v` tests this with an 80 ms gap between presses,
+which is roughly what two fingers actually achieve.
+
+Contact bounce is handled separately: each input must hold a new value for
+10 ms before the debounced output follows. Without that, a single press reads
+as hundreds of presses at 100 MHz.
+
+### Button polarity
+
+`ACTIVE_HIGH` is set to 1 in the `button_ctrl` instance inside
+`crypto_axi_top.v`. The application prints the raw pin state at startup:
+
+```
+Button raw state (idle): 0b00 (polarity OK)
+```
+
+If it reads `0b11` with nothing pressed, the buttons are active low. Change
+`ACTIVE_HIGH` to 0 and rebuild the bitstream. That is the only change needed.
+
 ## 6. Register map
 
 Offsets from the base address in the Address Editor.
@@ -320,6 +411,7 @@ Offsets from the base address in the Address Editor.
 | 0x08 | XFER | WO/RO | Write a byte to start a transfer. Read: `[7:0]` received byte, `[8]` busy |
 | 0x0C | STATUS | RO | `[0]` spi_busy, `[1]` chip_busy, `[2]` result_ready, `[3]` chip_err |
 | 0x10 | LED | RW | `[1:0]` 00 idle, 01 pass, 10 fail, 11 running |
+| 0x14 | BTN | RO/WO | Read: `[1:0]` live state, `[3:2]` event code, `[4]` pending, `[9:8]` raw pins. Write `[4]`=1 to acknowledge |
 
 SCLK divider is system clocks per half period, so
 `f_SCLK = f_clk / (2 * divider)`. Minimum safe value 4; default 8.
@@ -366,26 +458,21 @@ rtl_fpga/             FPGA-only scaffolding, do not tape out
   crypto_axi_top.v    AXI4-Lite peripheral, reset synchronizer
   spi_master_lite.v   SPI Mode 0 master
   status_led.v        blink patterns
+  button_ctrl.v       debounce and multi-press detection
 
 constraints/zcu106_crypto.xdc
-scripts/build_zcu106.tcl    Vivado project and block design (untested)
-scripts/run_sim.sh          full regression runner
-
-vitis/main.c                bare-metal known-answer test application
-vitis/crypto_vectors.h      generated golden vectors
-
-sim/golden.py               Python reference: SHA-256 and Ascon-128
-sim/gen_vectors.py          regenerates every .vh vector file
-sim/tb_sha_fix.v            SHA-256 unit test
-sim/tb_ascon_fix.v          Ascon-128 unit test
-sim/tb_chip_top.v           end to end through the SPI pins
-sim/tb_axi_top.v            end to end through an AXI4-Lite bus model
-sim/tb_rate.v               SCLK rate characterisation
+scripts/build_zcu106.tcl
+scripts/run_sim.sh
+vitis/main.c
+vitis/crypto_vectors.h
+sim/                  testbenches and the Python golden reference
 ```
 
 ## 9. Things to watch
 
-- **Verify the LED pins** against the master XDC for your board revision.
+- **Verify the LED pins** and **fill in the two button pins** against the master
+  XDC for your board revision. The button pins are placeholders and will stop
+  the build until you replace them.
 - **The Tcl script is untested.** The RTL and C are not.
 - **Ascon plaintext is capped at 16 bytes** by the result bus width, not by the
   core. If you need 32, the result readback has to grow to 48 bytes and both
@@ -393,6 +480,17 @@ sim/tb_rate.v               SCLK rate characterisation
 - **Associated data is not reachable** over the SPI protocol (`ad_len` is tied
   to zero). The core implements AD correctly and it is covered by the unit
   tests, so exposing it later is a protocol change, not a core change.
+- **Hex output in the application does not use printf width modifiers.**
+  `xil_printf` is a cut-down printf, and zero-pad or uppercase `%X` support
+  varies by BSP version; an unsupported specifier is printed literally. That
+  would corrupt exactly the output you need most, the ID value and the got/exp
+  dumps on a mismatch. Hex is printed a nibble at a time using only `%c`.
+- **`ASYNC_REG` is split deliberately.** The reset and button synchronizers
+  carry `(* ASYNC_REG = "TRUE" *)` in the RTL, because an XDC `get_cells` with
+  a `REF_NAME` filter resolves reliably at implementation but may not match
+  during synthesis, losing the synthesis-side effect. The `spi_slave` chains
+  stay in the XDC so `rtl/` remains free of FPGA-specific attributes; they are
+  also the low-risk case, since master and slave share one clock in this build.
 - The async reset style in `rtl/` was deliberately left alone. Synchronous
   reset is the usual FPGA preference, but you want the FPGA exercising the same
   logic that tapes out.

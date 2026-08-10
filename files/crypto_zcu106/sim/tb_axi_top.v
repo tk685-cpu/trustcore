@@ -24,6 +24,7 @@ module tb_axi_top;
     localparam REG_XFER   = 5'h08;
     localparam REG_STATUS = 5'h0C;
     localparam REG_LED    = 5'h10;
+    localparam REG_BTN    = 5'h14;
 
     reg clk = 1'b0;
     reg aresetn = 1'b0;
@@ -49,11 +50,12 @@ module tb_axi_top;
     reg             rready  = 0;
 
     wire led_pass, led_fail;
+    reg  [1:0] btn = 2'b00;
 
     crypto_axi_top #(
         .C_S_AXI_DATA_WIDTH (DW),
         .C_S_AXI_ADDR_WIDTH (AW),
-        .CLK_HZ             (100_000_000)
+        .CLK_HZ             (100_000)
     ) dut (
         .s_axi_aclk    (clk),
         .s_axi_aresetn (aresetn),
@@ -76,6 +78,7 @@ module tb_axi_top;
         .s_axi_rresp   (rresp),
         .s_axi_rvalid  (rvalid),
         .s_axi_rready  (rready),
+        .btn           (btn),
         .led_pass      (led_pass),
         .led_fail      (led_fail)
     );
@@ -240,6 +243,42 @@ module tb_axi_top;
     endtask
 
     // ---------------------------------------------------------------------
+    // Press buttons and read the event back the way software will
+    // ---------------------------------------------------------------------
+    task test_button(input [1:0] press, input [1:0] expect_code,
+                     input [8*24:1] name);
+        integer guard;
+        begin
+            vectors = vectors + 1;
+            btn = press;
+            repeat (40000) @(posedge clk);        // hold past the window
+            btn = 2'b00;
+            repeat (2000) @(posedge clk);
+
+            guard = 0;
+            axi_read(REG_BTN);
+            while (rd_val[4] !== 1'b1 && guard < 200) begin
+                axi_read(REG_BTN); guard = guard + 1;
+            end
+
+            if (rd_val[4] === 1'b1 && rd_val[3:2] === expect_code)
+                $display("  PASS button %0s", name);
+            else begin
+                $display("  FAIL button %0s: BTN=%08h", name, rd_val);
+                errors = errors + 1;
+            end
+
+            axi_write(REG_BTN, 32'h10);           // acknowledge
+            axi_read(REG_BTN);
+            if (rd_val[4] !== 1'b0) begin
+                $display("  FAIL button ack did not clear (BTN=%08h)", rd_val);
+                errors = errors + 1;
+            end
+            repeat (2000) @(posedge clk);
+        end
+    endtask
+
+    // ---------------------------------------------------------------------
     // Main sequence
     // ---------------------------------------------------------------------
     initial begin
@@ -278,6 +317,13 @@ module tb_axi_top;
             errors = errors + 1;
         end
         vectors = vectors + 1;
+
+        // -- pushbutton event path --
+        // CLK_HZ is scaled to 100 kHz here, so 1 ms = 100 cycles:
+        // debounce = 1000 cycles, collection window = 25000 cycles.
+        test_button(2'b01, 2'b01, "W only -> Ascon");
+        test_button(2'b10, 2'b10, "E only -> SHA-256");
+        test_button(2'b11, 2'b11, "W+E    -> both");
 
         // -- crypto vectors through the whole path --
         `include "axi_vectors.vh"

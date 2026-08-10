@@ -70,6 +70,7 @@ run_tb () {
     if ! echo "$out" | grep -qE "errors=0"; then FAILED=1; fi
 }
 
+run_tb button_unit  tb_button.v    "$FPGA/button_ctrl.v"
 run_tb sha256_unit  tb_sha_fix.v   "$RTL/sha256.v"
 run_tb ascon_unit   tb_ascon_fix.v "$RTL/ascon128.v"
 run_tb chip_e2e     tb_chip_top.v  "$RTL"/*.v
