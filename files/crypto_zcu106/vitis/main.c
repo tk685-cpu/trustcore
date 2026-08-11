@@ -40,6 +40,7 @@
 #include "xil_printf.h"
 #include "xil_types.h"
 #include "sleep.h"
+#include "xtime_l.h"
 
 /* ---------------------------------------------------------------------------
  * Peripheral base address
@@ -113,6 +114,80 @@ typedef struct { u8 len; u8 msg[32]; u8 digest[32]; } sha_vec_t;
 typedef struct { u8 len; u8 pt[16];  u8 result[32]; } asc_vec_t;
 
 #include "crypto_vectors.h"
+
+/* ---------------------------------------------------------------------------
+ * Random subset selection
+ *
+ * The vector tables above are fixed at build time, but running all of them on
+ * every button press means every press is the same test. Instead each run
+ * draws a random subset, so pressing the button repeatedly exercises different
+ * vectors. The tables are padded well beyond the subset size for this to be
+ * worth doing; see sim/gen_kat_vectors.py --pool.
+ *
+ * Set *_PER_RUN to 0 to run the whole table, which is the old behaviour.
+ *
+ * The seed is taken from the CPU cycle counter at the moment of the press, so
+ * it differs every time, and is printed with each run. To reproduce a failing
+ * run exactly, set FIXED_SEED to the value that was printed.
+ * ------------------------------------------------------------------------- */
+#define SHA_PER_RUN     25U     /* 0 = run all N_SHA_VEC */
+#define ASC_PER_RUN     25U     /* 0 = run all N_ASC_VEC */
+#define FIXED_SEED      0U      /* non-zero replays that seed */
+
+static u32 rng_state;
+
+/* xorshift32. Not cryptographic: it only decides which published vector to
+ * run next, so statistical quality is irrelevant. It is used because it is
+ * four lines and has no state to initialise beyond a non-zero seed. */
+static u32 rng_next(void)
+{
+    u32 x = rng_state;
+
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    rng_state = x;
+    return x;
+}
+
+static u32 rng_seed(void)
+{
+    XTime t;
+
+    if (FIXED_SEED != 0U) {
+        rng_state = FIXED_SEED;
+        return rng_state;
+    }
+
+    XTime_GetTime(&t);
+    rng_state = (u32)t ^ 0x9E3779B9U;
+    if (rng_state == 0U)            /* xorshift is stuck at zero */
+        rng_state = 1U;
+    return rng_state;
+}
+
+/* Partial Fisher-Yates: leaves a uniformly random selection of `n` distinct
+ * table indices in idx[0..n-1]. Sampling without replacement matters here --
+ * drawing 25 of 200 with replacement would repeat some and skip others. */
+static int pick_subset(u16 *idx, int total, u32 want)
+{
+    int i, n;
+
+    for (i = 0; i < total; i++)
+        idx[i] = (u16)i;
+
+    if (want == 0U || (int)want >= total)
+        return total;
+
+    n = (int)want;
+    for (i = 0; i < n; i++) {
+        int j = i + (int)(rng_next() % (u32)(total - i));
+        u16 t = idx[i];
+        idx[i] = idx[j];
+        idx[j] = t;
+    }
+    return n;
+}
 
 /* ---------------------------------------------------------------------------
  * Hex printing
@@ -260,21 +335,25 @@ static void dump_hex(const char *label, const u8 *p, int n)
 static int suite_sha256(int *ran)
 {
     u8  got[32];
-    int i, fail = 0;
+    u16 idx[N_SHA_VEC];
+    int i, k, n, fail = 0;
 
-    xil_printf("\r\n--- SHA-256 (%d vectors) ---\r\n", N_SHA_VEC);
-    for (i = 0; i < N_SHA_VEC; i++) {
+    n = pick_subset(idx, N_SHA_VEC, SHA_PER_RUN);
+
+    xil_printf("\r\n--- SHA-256 (%d of %d vectors) ---\r\n", n, N_SHA_VEC);
+    for (k = 0; k < n; k++) {
+        i = (int)idx[k];
         memset(got, 0, sizeof(got));
         (*ran)++;
         if (run_sha256(sha_vec[i].msg, sha_vec[i].len, got) != 0) {
-            xil_printf("  FAIL len=%d (transfer error)\r\n", sha_vec[i].len);
+            xil_printf("  FAIL #%d len=%d (transfer error)\r\n", i, sha_vec[i].len);
             fail++;
             continue;
         }
         if (memcmp(got, sha_vec[i].digest, 32) == 0) {
-            xil_printf("  PASS len=%d\r\n", sha_vec[i].len);
+            xil_printf("  PASS #%d len=%d\r\n", i, sha_vec[i].len);
         } else {
-            xil_printf("  FAIL len=%d\r\n", sha_vec[i].len);
+            xil_printf("  FAIL #%d len=%d\r\n", i, sha_vec[i].len);
             dump_hex("got", got, 32);
             dump_hex("exp", sha_vec[i].digest, 32);
             fail++;
@@ -286,22 +365,26 @@ static int suite_sha256(int *ran)
 static int suite_ascon(int *ran)
 {
     u8  got[32];
-    int i, fail = 0;
+    u16 idx[N_ASC_VEC];
+    int i, k, n, fail = 0;
 
-    xil_printf("\r\n--- Ascon-128 (%d vectors) ---\r\n", N_ASC_VEC);
-    for (i = 0; i < N_ASC_VEC; i++) {
+    n = pick_subset(idx, N_ASC_VEC, ASC_PER_RUN);
+
+    xil_printf("\r\n--- Ascon-128 (%d of %d vectors) ---\r\n", n, N_ASC_VEC);
+    for (k = 0; k < n; k++) {
+        i = (int)idx[k];
         memset(got, 0, sizeof(got));
         (*ran)++;
         if (run_ascon(test_key, test_nonce,
                       asc_vec[i].pt, asc_vec[i].len, got) != 0) {
-            xil_printf("  FAIL len=%d (transfer error)\r\n", asc_vec[i].len);
+            xil_printf("  FAIL #%d len=%d (transfer error)\r\n", i, asc_vec[i].len);
             fail++;
             continue;
         }
         if (memcmp(got, asc_vec[i].result, 32) == 0) {
-            xil_printf("  PASS len=%d\r\n", asc_vec[i].len);
+            xil_printf("  PASS #%d len=%d\r\n", i, asc_vec[i].len);
         } else {
-            xil_printf("  FAIL len=%d\r\n", asc_vec[i].len);
+            xil_printf("  FAIL #%d len=%d\r\n", i, asc_vec[i].len);
             dump_hex("got (ct||tag)", got, 32);
             dump_hex("exp (ct||tag)", asc_vec[i].result, 32);
             fail++;
@@ -438,6 +521,12 @@ int main(void)
         fail = 0;
         ran  = 0;
         WR(REG_LED, LED_RUNNING);
+
+        /* Reseed per press so each run draws a different subset. Printed so a
+         * failure can be replayed: set FIXED_SEED to this value and rebuild. */
+        xil_printf("\r\nseed: 0x");
+        put_hex32(rng_seed());
+        xil_printf("\r\n");
 
         switch (evt) {
         case EVT_ASCON:
