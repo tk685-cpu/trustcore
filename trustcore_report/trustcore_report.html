@@ -1,0 +1,1260 @@
+<title>TrustCore — final report</title>
+<style>
+/* ---------- tokens: light is the bare :root ---------- */
+:root{
+  --ground:#f7f8f9;
+  --surface:#ffffff;
+  --sunk:#eef0f2;
+  --ink:#14181d;
+  --ink-2:#4a545e;
+  --ink-3:#79838d;
+  --rule:#dde1e5;
+  --rule-2:#c6ccd2;
+  --signal:#1f4e79;      /* measured / verified */
+  --signal-soft:#e3edf6;
+  --alarm:#a8412c;       /* over budget / defect */
+  --alarm-soft:#f7e7e2;
+  --good:#2f6b4f;
+  --shadow:0 1px 2px rgba(20,24,29,.06),0 8px 24px -16px rgba(20,24,29,.25);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#101317;
+    --surface:#171b20;
+    --sunk:#1d2228;
+    --ink:#e6eaee;
+    --ink-2:#a3adb7;
+    --ink-3:#78828c;
+    --rule:#2a3138;
+    --rule-2:#3a434c;
+    --signal:#7fb2df;
+    --signal-soft:#1a2a3a;
+    --alarm:#e08f77;
+    --alarm-soft:#33211c;
+    --good:#79c39c;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -16px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#101317;
+  --surface:#171b20;
+  --sunk:#1d2228;
+  --ink:#e6eaee;
+  --ink-2:#a3adb7;
+  --ink-3:#78828c;
+  --rule:#2a3138;
+  --rule-2:#3a434c;
+  --signal:#7fb2df;
+  --signal-soft:#1a2a3a;
+  --alarm:#e08f77;
+  --alarm-soft:#33211c;
+  --good:#79c39c;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px -16px rgba(0,0,0,.7);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:16.5px;
+  line-height:1.62;
+  -webkit-font-smoothing:antialiased;
+}
+.mono{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace}
+
+/* ---------- page frame ---------- */
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px 96px}
+.col{max-width:64ch}
+.wide{max-width:980px}
+
+/* ---------- masthead ---------- */
+header.mast{
+  border-bottom:2px solid var(--ink);
+  padding:56px 0 20px;
+  margin-bottom:44px;
+}
+.eyebrow{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 18px;
+}
+h1{
+  font-size:clamp(34px,5.4vw,54px);
+  line-height:1.04;letter-spacing:-.028em;font-weight:700;
+  margin:0 0 14px;text-wrap:balance;
+}
+.dek{font-size:19px;line-height:1.45;color:var(--ink-2);max-width:56ch;margin:0 0 26px;text-wrap:balance}
+.byline{
+  display:flex;flex-wrap:wrap;gap:8px 26px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:12px;color:var(--ink-3);letter-spacing:.02em;
+}
+
+/* ---------- verdict strip ---------- */
+.verdict{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  gap:1px;background:var(--rule);border:1px solid var(--rule);
+  border-radius:3px;overflow:hidden;margin:0 0 52px;
+}
+.vcell{background:var(--surface);padding:16px 18px}
+.vlabel{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);
+  margin:0 0 7px;
+}
+.vnum{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:25px;font-weight:600;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;line-height:1.1;margin:0 0 4px;
+}
+.vnum.bad{color:var(--alarm)}
+.vnum.ok{color:var(--good)}
+.vfoot{font-size:12.5px;color:var(--ink-3);margin:0;line-height:1.35}
+
+/* ---------- sections ---------- */
+section{margin:0 0 60px}
+h2{
+  font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+  color:var(--ink);margin:0 0 4px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+h2 .num{color:var(--alarm);margin-right:12px}
+.h2rule{height:1px;background:var(--rule-2);margin:0 0 26px}
+h3{font-size:20px;letter-spacing:-.014em;font-weight:650;margin:36px 0 10px;text-wrap:balance}
+h4{font-size:15.5px;font-weight:650;margin:26px 0 6px;color:var(--ink)}
+p{margin:0 0 16px}
+strong{font-weight:650}
+a{color:var(--signal)}
+ul,ol{margin:0 0 16px;padding-left:1.25em}
+li{margin:0 0 7px}
+
+/* ---------- finding callout ---------- */
+.finding{
+  border-left:3px solid var(--alarm);
+  background:var(--alarm-soft);
+  padding:16px 20px;margin:26px 0;border-radius:0 3px 3px 0;
+}
+.finding p{margin:0;font-size:17px;line-height:1.5}
+.finding.calm{border-left-color:var(--signal);background:var(--signal-soft)}
+.note{
+  border:1px dashed var(--rule-2);background:var(--sunk);
+  padding:14px 18px;border-radius:3px;margin:24px 0;
+  font-size:14.5px;color:var(--ink-2);
+}
+.note p{margin:0}
+
+/* ---------- tables ---------- */
+.tablewrap{overflow-x:auto;margin:24px 0 10px;border:1px solid var(--rule);border-radius:3px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 14px;text-align:left;border-bottom:1px solid var(--rule);white-space:nowrap}
+thead th{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);font-weight:600;background:var(--sunk);
+}
+tbody tr:last-child td{border-bottom:none}
+td.n,th.n{text-align:right;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+tr.mine td{background:var(--signal-soft);font-weight:600}
+tr.rule-top td{border-top:2px solid var(--rule-2)}
+caption{caption-side:bottom;text-align:left;padding:10px 14px;font-size:13px;color:var(--ink-3);line-height:1.45}
+
+pre{
+  background:var(--sunk);border:1px solid var(--rule);border-radius:3px;
+  padding:14px 16px;overflow-x:auto;font-size:13px;line-height:1.55;margin:18px 0;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;
+  background:var(--sunk);padding:1px 5px;border-radius:3px}
+pre code{background:none;padding:0;font-size:inherit}
+
+/* ---------- figures ---------- */
+figure{margin:30px 0;padding:0}
+.figbox{background:var(--surface);border:1px solid var(--rule);border-radius:3px;padding:20px 16px;overflow-x:auto}
+figcaption{font-size:13px;color:var(--ink-3);margin-top:10px;line-height:1.45;max-width:70ch}
+svg{display:block;max-width:100%;height:auto}
+.svgtext{font-family:ui-sans-serif,system-ui,sans-serif;font-size:11px;fill:var(--ink)}
+.svgmono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;fill:var(--ink-2)}
+.svglabel{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:9px;fill:var(--ink-3);letter-spacing:.08em}
+
+/* ---------- work items ---------- */
+.work{border-top:1px solid var(--rule);padding:20px 0 4px}
+.work:first-of-type{border-top:2px solid var(--rule-2)}
+.worktop{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+.rank{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--alarm);font-weight:700}
+.worktitle{font-size:17px;font-weight:650;letter-spacing:-.01em;flex:1;min-width:min(100%,260px)}
+.cost{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:var(--ink-3);
+  border:1px solid var(--rule-2);padding:2px 8px;border-radius:99px;white-space:nowrap}
+.work p{margin:8px 0 0;font-size:15.5px;color:var(--ink-2)}
+
+footer{border-top:2px solid var(--ink);padding-top:22px;margin-top:56px;font-size:13.5px;color:var(--ink-3)}
+footer ol{padding-left:1.4em}
+footer li{margin-bottom:8px}
+:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">Final report · Seoul National University</p>
+  <h1>TrustCore-v1</h1>
+  <p class="dek">A SHA-256 / Ascon-128 root-of-trust chip: why the ETRI tape-out did
+  not fit, the RTL defects found on the way, and what the corrected core measures.</p>
+  <div class="byline">
+    <span>Taehee Kim · Seoul National University</span>
+    <span>0.5&thinsp;µm ETRI CMOS → Zynq UltraScale+ XCZU7EV</span>
+    <span>July – August 2026</span>
+  </div>
+</header>
+
+<div class="verdict wide">
+  <div class="vcell">
+    <p class="vlabel">Die budget</p>
+    <p class="vnum">1.0 mm²</p>
+    <p class="vfoot">ETRI MPW slot at 0.5&thinsp;µm</p>
+  </div>
+  <div class="vcell">
+    <p class="vlabel">Genus actual</p>
+    <p class="vnum bad">8.50 mm²</p>
+    <p class="vfoot">39,333 GE. <strong>8.5× over.</strong></p>
+  </div>
+  <div class="vcell">
+    <p class="vlabel">Spec estimate</p>
+    <p class="vnum bad">14–22 kGE</p>
+    <p class="vfoot">Actual was 1.8–2.8× that</p>
+  </div>
+  <div class="vcell">
+    <p class="vlabel">F<sub>max</sub> at 0.5 µm</p>
+    <p class="vnum ok">150 MHz</p>
+    <p class="vfoot">6× the target — timing was fine</p>
+  </div>
+  <div class="vcell">
+    <p class="vlabel">Defects found</p>
+    <p class="vnum bad">6</p>
+    <p class="vfoot">One wrong Ascon tag, every input</p>
+  </div>
+  <div class="vcell">
+    <p class="vlabel">On hardware</p>
+    <p class="vnum ok">all pass</p>
+    <p class="vfoot">ZCU106, all 8 LEDs solid</p>
+  </div>
+</div>
+
+<section class="col">
+  <h2><span class="num">01</span>Summary</h2>
+  <div class="h2rule"></div>
+
+  <p>TrustCore-v1 is a hardware root of trust for naval and defence equipment. It sits
+  between a host and its firmware: before a device is allowed to boot, the chip hashes
+  the firmware image and the host compares that digest against a known-good reference.
+  It also authenticates device identity and transmitted data using Ascon-128. The
+  intended deployment is shipboard — ECDIS, AIS / GNSS / radar, gateways, PLCs,
+  propulsion and steering controllers, VDRs, autonomous navigation computers.</p>
+
+  <p>The plan was to tape it out on an ETRI multi-project-wafer shuttle in 0.5&thinsp;µm
+  CMOS, on a 1&thinsp;mm² die, at 25&thinsp;MHz, with an SPI slave interface. That did
+  not happen, and the reason is unambiguous.</p>
+
+  <div class="finding">
+    <p><strong>Genus returned 8.49&thinsp;mm² of cell area against a 1&thinsp;mm² die
+    budget — 8.5× over.</strong> The pre-synthesis estimate in the project
+    specification was 14,000–22,000&thinsp;GE. The synthesised netlist is
+    <strong>39,333&thinsp;GE</strong>, roughly twice the top of that range. Every major
+    block individually exceeds the entire die budget: SHA-256 is 3.77&thinsp;mm²,
+    Ascon-128 is 2.30&thinsp;mm², and the SPI buffer alone is 1.75&thinsp;mm².</p>
+  </div>
+
+  <p><strong>Timing was never the problem.</strong> The design closes at 150&thinsp;MHz
+  in 0.5&thinsp;µm — six times the 25&thinsp;MHz target. What killed it was state: 2,985
+  flip-flops occupying 55.7% of the total area.</p>
+
+  <p><strong>The RTL was also wrong.</strong> Six defects, five confirmed by running
+  the original code rather than reading it. One is a genuine cryptographic
+  correctness bug: the Ascon-128 core produced a wrong authentication tag for
+  <em>every</em> input while producing correct ciphertext. That would have shipped in
+  silicon and would not have been noticed until someone tried to authenticate.</p>
+
+  <p>Rather than lose the work, the project pivoted to a ZCU106. The fixed RTL is
+  instantiated <em>unmodified</em> as <code>chip_top</code> inside an FPGA-only test
+  harness, driven over AXI4-Lite by the Cortex-A53. That build runs on real hardware.</p>
+
+  <p>So the deliverable is not a chip. It is a corrected, verified crypto core with a
+  measured hardware baseline and a documented reason why the original target was never
+  reachable.</p>
+</section>
+
+<section>
+  <div class="col">
+    <h2><span class="num">02</span>What the chip was supposed to be</h2>
+    <div class="h2rule"></div>
+    <p>A host sends a command frame over SPI, the chip runs either a SHA-256 hash or an
+    Ascon-128 authenticated encryption, and the host reads 32 bytes of result back in a
+    second frame.</p>
+  </div>
+
+  <div class="tablewrap wide">
+    <table>
+      <thead><tr><th>Item</th><th>Specification</th></tr></thead>
+      <tbody>
+        <tr><td>Purpose</td><td>Hardware root of trust: firmware integrity, device and data authentication</td></tr>
+        <tr><td>Deployment</td><td>Shipboard sensor and control modules on naval vessels</td></tr>
+        <tr><td>Process</td><td>0.5&thinsp;µm CMOS — ETRI MPW shuttle</td></tr>
+        <tr><td>Cell library</td><td><code>khu_etri05_stdcells</code> — 2-poly 3-metal, <strong>5&thinsp;V</strong>, typical 25&thinsp;°C</td></tr>
+        <tr><td>Die budget</td><td>1&thinsp;mm²</td></tr>
+        <tr><td>System clock</td><td>25&thinsp;MHz</td></tr>
+        <tr><td>SPI clock</td><td>5&thinsp;MHz (host-driven)</td></tr>
+        <tr><td>Pins</td><td>8 — VDD, VSS, CLK, RST_N, SCLK, MOSI, MISO, CS_N</td></tr>
+        <tr><td>Algorithms</td><td>SHA-256 (FIPS 180-4), Ascon-128 v1.2 (NIST LWC winner)</td></tr>
+        <tr><td>Message limits</td><td>SHA-256 0–32&thinsp;B · Ascon 0–16&thinsp;B plaintext</td></tr>
+        <tr><td>Architecture</td><td>Iterative, 1 round per clock cycle, both cores</td></tr>
+      </tbody>
+      <caption>TrustCore-v1 as specified. Ascon is the right algorithm choice here: it
+      won the NIST lightweight cryptography competition and was designed for exactly
+      this constraint envelope.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p>The intended flow, per the project specification: the host sends the firmware
+    bytes over SPI with <code>CMD = SHA-256</code>; <code>crypto_fsm</code> routes the
+    request to the on-chip core, waits, and returns the digest; the host compares against
+    a known-good reference and decides whether to allow boot. Note that <strong>the boot
+    decision is not made on-chip</strong> — the chip reports, the host decides. That is a
+    design limitation worth stating plainly, because a root of trust that only advises is
+    a weaker guarantee than one that gates.</p>
+  </div>
+
+  <figure class="wide">
+    <div class="figbox">
+      <svg viewBox="0 0 900 250" role="img" aria-label="Block diagram of chip_top: SPI pads feed spi_top, which feeds crypto_fsm, which routes to sha256 and ascon128, with results returning to spi_top.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9 z" fill="var(--ink-2)"/>
+          </marker>
+        </defs>
+        <rect x="14" y="14" width="872" height="222" rx="5" fill="none" stroke="var(--rule-2)" stroke-dasharray="5 4"/>
+        <text class="svglabel" x="28" y="34">CHIP_TOP — THE ASIC DELIVERABLE</text>
+
+        <rect x="34" y="80" width="94" height="76" rx="3" fill="var(--sunk)" stroke="var(--rule-2)"/>
+        <text class="svgmono" x="81" y="104" text-anchor="middle">sclk</text>
+        <text class="svgmono" x="81" y="119" text-anchor="middle">mosi</text>
+        <text class="svgmono" x="81" y="134" text-anchor="middle">miso</text>
+        <text class="svgmono" x="81" y="149" text-anchor="middle">cs_n</text>
+        <text class="svglabel" x="81" y="72" text-anchor="middle">PADS</text>
+
+        <rect x="184" y="82" width="164" height="72" rx="3" fill="var(--signal-soft)" stroke="var(--signal)"/>
+        <text class="svgtext" x="266" y="108" text-anchor="middle" font-weight="700">spi_top</text>
+        <text class="svgmono" x="266" y="126" text-anchor="middle">spi_slave +</text>
+        <text class="svgmono" x="266" y="140" text-anchor="middle">spi_buffer_ctrl</text>
+
+        <rect x="410" y="82" width="150" height="72" rx="3" fill="var(--signal-soft)" stroke="var(--signal)"/>
+        <text class="svgtext" x="485" y="110" text-anchor="middle" font-weight="700">crypto_fsm</text>
+        <text class="svgmono" x="485" y="130" text-anchor="middle">router + watchdog</text>
+
+        <rect x="640" y="42" width="204" height="60" rx="3" fill="var(--surface)" stroke="var(--rule-2)"/>
+        <text class="svgtext" x="742" y="68" text-anchor="middle" font-weight="700">sha256</text>
+        <text class="svgmono" x="742" y="86" text-anchor="middle">84 cycles · 17.5 kGE · 1188 LUT</text>
+
+        <rect x="640" y="134" width="204" height="60" rx="3" fill="var(--surface)" stroke="var(--rule-2)"/>
+        <text class="svgtext" x="742" y="160" text-anchor="middle" font-weight="700">ascon128</text>
+        <text class="svgmono" x="742" y="178" text-anchor="middle">33–47 cycles · 10.6 kGE · 1341 LUT</text>
+
+        <g stroke="var(--ink-2)" stroke-width="1.4" fill="none" marker-end="url(#ar)">
+          <path d="M128,118 L178,118"/>
+          <path d="M348,118 L404,118"/>
+          <path d="M560,110 L600,110 L600,72 L634,72"/>
+          <path d="M560,126 L600,126 L600,164 L634,164"/>
+          <path d="M485,154 L485,214 L266,214 L266,160"/>
+        </g>
+        <text class="svgmono" x="376" y="110" text-anchor="middle">cmd, len,</text>
+        <text class="svgmono" x="376" y="140" text-anchor="middle">key, nonce, data</text>
+        <text class="svgmono" x="376" y="228" text-anchor="middle">result[255:0], result_valid</text>
+      </svg>
+    </div>
+    <figcaption>Everything inside the dashed box is the tape-out deliverable, and is
+    instantiated on the FPGA with no changes. Resource figures are out-of-context
+    place-and-route on the XCZU7EV.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="col">
+    <h2><span class="num">03</span>Why the ASIC path did not close</h2>
+    <div class="h2rule"></div>
+
+    <h3>The estimate, and the measurement</h3>
+    <p>The project specification carried a rough pre-synthesis gate estimate. Genus was
+    then run against the real ETRI library across a 13-point frequency sweep. The two do
+    not agree.</p>
+  </div>
+
+  <div class="tablewrap wide">
+    <table>
+      <thead><tr><th>Block</th><th class="n">Spec estimate</th><th class="n">Genus actual</th><th class="n">Error</th></tr></thead>
+      <tbody>
+        <tr><td>SHA-256 core</td><td class="n">10,000–15,000 GE</td><td class="n">17,455 GE</td><td class="n">1.2–1.7×</td></tr>
+        <tr><td>Ascon-128 core</td><td class="n">3,000–5,000 GE</td><td class="n">10,627 GE</td><td class="n">2.1–3.5×</td></tr>
+        <tr><td>SPI + buffer + router</td><td class="n">1,000–2,000 GE</td><td class="n">11,252 GE</td><td class="n">5.6–11×</td></tr>
+        <tr><td>Security control FSM</td><td class="n">~350 GE</td><td class="n">(folded into router)</td><td class="n">—</td></tr>
+        <tr class="mine rule-top"><td>Total</td><td class="n">14,000–22,000 GE</td><td class="n">39,333 GE</td><td class="n">1.8–2.8×</td></tr>
+      </tbody>
+      <caption>Pre-synthesis estimate against measured synthesis, at 35&thinsp;MHz. Gate
+      equivalents use the library's own <code>NAND2X1</code> at 216.0&thinsp;µm². The
+      estimate was not absurd — it was simply never validated, and the interface logic
+      was underestimated by nearly an order of magnitude.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p>The single largest error is not in the cryptography. It is in the plumbing.
+    <code>spi_buffer_ctrl</code> was estimated at a fraction of 1,000–2,000&thinsp;GE and
+    came back at <strong>8,100&thinsp;GE</strong> — 79% the size of the entire Ascon
+    core, for what is conceptually a byte shift register. The reason is visible in the
+    port list: it holds a 128-bit key, a 128-bit nonce, 256 bits of data and a 256-bit
+    result <em>simultaneously</em>, all in flip-flops, all at once.</p>
+
+    <h3>Area against the die budget</h3>
+  </div>
+
+  <div class="tablewrap wide">
+    <table>
+      <thead><tr><th>Block</th><th class="n">Cells</th><th class="n">Area (µm²)</th><th class="n">mm²</th><th class="n">GE</th><th class="n">vs 1 mm²</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">sha256</td><td class="n">8,658</td><td class="n">3,770,298</td><td class="n">3.770</td><td class="n">17,455</td><td class="n">3.77×</td></tr>
+        <tr><td class="mono">ascon128</td><td class="n">6,227</td><td class="n">2,295,423</td><td class="n">2.295</td><td class="n">10,627</td><td class="n">2.30×</td></tr>
+        <tr><td class="mono">spi_buffer_ctrl</td><td class="n">2,821</td><td class="n">1,749,609</td><td class="n">1.750</td><td class="n">8,100</td><td class="n">1.75×</td></tr>
+        <tr><td class="mono">crypto_fsm glue</td><td class="n">1,066</td><td class="n">608,000</td><td class="n">0.608</td><td class="n">2,815</td><td class="n">0.61×</td></tr>
+        <tr><td class="mono">spi_slave</td><td class="n">112</td><td class="n">72,729</td><td class="n">0.073</td><td class="n">337</td><td class="n">0.07×</td></tr>
+        <tr class="mine rule-top"><td class="mono">chip_top</td><td class="n">18,845</td><td class="n">8,496,018</td><td class="n">8.496</td><td class="n">39,333</td><td class="n">8.50×</td></tr>
+      </tbody>
+      <caption>Genus <code>report_area</code>, <code>chip_top</code> at 35&thinsp;MHz,
+      typical corner. The <code>Net-Area</code> column in the raw report is zero and the
+      wireload model is <code>&lt;none&gt;</code> — this is <em>cell area only</em>. A
+      real placed and routed die would be larger still, before adding the pad ring.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <div class="finding">
+      <p>Only <code>spi_slave</code>, at 0.073&thinsp;mm², would have fit in the die
+      budget. <strong>Every other block in the design individually exceeds the entire
+      1&thinsp;mm² slot</strong> — the SHA-256 core by nearly 4× on its own.</p>
+    </div>
+  </div>
+
+  <figure class="wide">
+    <div class="figbox">
+      <svg viewBox="0 0 900 250" role="img" aria-label="Bar chart of measured cell area against the 1 square millimetre die budget: sha256 3.77, ascon128 2.30, spi_buffer_ctrl 1.75, crypto_fsm glue 0.61, spi_slave 0.07, chip_top total 8.50 square millimetres.">
+        <line x1="200" y1="18" x2="200" y2="200" stroke="var(--rule-2)"/>
+        <g stroke="var(--rule)" stroke-dasharray="3 4">
+          <line x1="345" y1="18" x2="345" y2="200"/>
+          <line x1="490" y1="18" x2="490" y2="200"/>
+          <line x1="635" y1="18" x2="635" y2="200"/>
+          <line x1="780" y1="18" x2="780" y2="200"/>
+        </g>
+
+        <rect x="200" y="24" width="72.5" height="20" fill="var(--signal)" opacity=".3" stroke="var(--signal)"/>
+        <text class="svgtext" x="192" y="38" text-anchor="end" font-weight="700">DIE BUDGET</text>
+        <text class="svgmono" x="282" y="38">1.00</text>
+
+        <rect x="200" y="52" width="273.3" height="20" fill="var(--alarm)" opacity=".4" stroke="var(--alarm)"/>
+        <text class="svgtext" x="192" y="66" text-anchor="end">sha256</text>
+        <text class="svgmono" x="483" y="66">3.77</text>
+
+        <rect x="200" y="80" width="166.4" height="20" fill="var(--alarm)" opacity=".4" stroke="var(--alarm)"/>
+        <text class="svgtext" x="192" y="94" text-anchor="end">ascon128</text>
+        <text class="svgmono" x="376" y="94">2.30</text>
+
+        <rect x="200" y="108" width="126.9" height="20" fill="var(--alarm)" opacity=".4" stroke="var(--alarm)"/>
+        <text class="svgtext" x="192" y="122" text-anchor="end">spi_buffer_ctrl</text>
+        <text class="svgmono" x="336" y="122">1.75</text>
+
+        <rect x="200" y="136" width="44.1" height="20" fill="var(--alarm)" opacity=".4" stroke="var(--alarm)"/>
+        <text class="svgtext" x="192" y="150" text-anchor="end">crypto_fsm glue</text>
+        <text class="svgmono" x="254" y="150">0.61</text>
+
+        <rect x="200" y="164" width="5.3" height="20" fill="var(--alarm)" opacity=".4" stroke="var(--alarm)"/>
+        <text class="svgtext" x="192" y="178" text-anchor="end">spi_slave</text>
+        <text class="svgmono" x="215" y="178">0.07</text>
+
+        <rect x="200" y="196" width="616" height="20" fill="var(--alarm)" opacity=".8" stroke="var(--alarm)"/>
+        <text class="svgtext" x="192" y="210" text-anchor="end" font-weight="700">chip_top total</text>
+        <text class="svgmono" x="826" y="210" font-weight="700">8.50</text>
+
+        <line x1="272.5" y1="18" x2="272.5" y2="220" stroke="var(--alarm)" stroke-width="2" stroke-dasharray="6 4"/>
+
+        <g class="svgmono" text-anchor="middle" fill="var(--ink-3)">
+          <text x="200" y="236">0</text><text x="345" y="236">2</text>
+          <text x="490" y="236">4</text><text x="635" y="236">6</text>
+          <text x="780" y="236">8</text>
+        </g>
+        <text class="svglabel" x="490" y="248" text-anchor="middle">CELL AREA IN 0.5 µm ETRI CMOS (mm²)</text>
+      </svg>
+    </div>
+    <figcaption>Measured area against the 1&thinsp;mm² MPW slot (dashed line).
+    Everything except <code>spi_slave</code> is over budget on its own.</figcaption>
+  </figure>
+
+  <div class="col">
+    <h3>Where the area went</h3>
+  </div>
+
+  <div class="tablewrap wide">
+    <table>
+      <thead><tr><th>Cell type</th><th class="n">Instances</th><th class="n">Area (µm²)</th><th class="n">Share</th></tr></thead>
+      <tbody>
+        <tr class="mine"><td>Sequential (<code>DFFSR</code>)</td><td class="n">2,985</td><td class="n">4,728,240</td><td class="n">55.7%</td></tr>
+        <tr><td>Logic</td><td class="n">12,180</td><td class="n">3,205,431</td><td class="n">37.8%</td></tr>
+        <tr><td>Inverters</td><td class="n">3,636</td><td class="n">533,880</td><td class="n">6.3%</td></tr>
+        <tr><td>Buffers</td><td class="n">83</td><td class="n">22,752</td><td class="n">0.3%</td></tr>
+        <tr class="rule-top"><td>Total</td><td class="n">18,884</td><td class="n">8,490,303</td><td class="n">100%</td></tr>
+      </tbody>
+      <caption><code>report_gates</code> at 50&thinsp;MHz. A single <code>DFFSR</code>
+      costs 1,584&thinsp;µm², or 7.33&thinsp;GE. The design is a register file with some
+      arithmetic attached.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p>Flip-flops are the whole story. The architectural state is unavoidable — SHA-256
+    needs 8 working variables, 8 hash registers and a 16-word message schedule window
+    (1,024&thinsp;b total), Ascon needs a 320-bit permutation state — but the
+    <em>interface</em> state was a choice. The 256-bit parallel input ports and the
+    simultaneous key/nonce/data/result buffering exist only because the protocol was
+    designed to hand each core a whole message at once.</p>
+
+    <h3>Frequency, area and power</h3>
+  </div>
+
+  <div class="tablewrap wide">
+    <table>
+      <thead><tr><th class="n">Freq (MHz)</th><th class="n">Cells</th><th class="n">Area (mm²)</th><th class="n">Slack (ps)</th><th class="n">Power (W)</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td class="n">35</td><td class="n">18,845</td><td class="n">8.496</td><td class="n">+12,344</td><td class="n">0.710</td><td>met</td></tr>
+        <tr><td class="n">45</td><td class="n">18,715</td><td class="n">8.485</td><td class="n">+5,721</td><td class="n">0.915</td><td>met</td></tr>
+        <tr><td class="n">50</td><td class="n">18,884</td><td class="n">8.490</td><td class="n">+3,838</td><td class="n">1.026</td><td>met</td></tr>
+        <tr><td class="n">55</td><td class="n">18,763</td><td class="n">8.471</td><td class="n">+2,336</td><td class="n">1.142</td><td>met</td></tr>
+        <tr><td class="n">60</td><td class="n">18,856</td><td class="n">8.492</td><td class="n">+820</td><td class="n">1.248</td><td>met</td></tr>
+        <tr><td class="n">65</td><td class="n">18,948</td><td class="n">8.489</td><td class="n">+283</td><td class="n">1.336</td><td>met</td></tr>
+        <tr><td class="n">70</td><td class="n">18,928</td><td class="n">8.491</td><td class="n">+26</td><td class="n">1.446</td><td>met</td></tr>
+        <tr><td class="n">75</td><td class="n">18,901</td><td class="n">8.477</td><td class="n">+2</td><td class="n">1.566</td><td>met</td></tr>
+        <tr><td class="n">100</td><td class="n">19,107</td><td class="n">8.547</td><td class="n">+103</td><td class="n">2.087</td><td>met</td></tr>
+        <tr><td class="n">125</td><td class="n">19,207</td><td class="n">8.593</td><td class="n">+6</td><td class="n">2.597</td><td>met</td></tr>
+        <tr class="mine"><td class="n">150</td><td class="n">19,220</td><td class="n">8.625</td><td class="n">0</td><td class="n">3.128</td><td>met (marginal)</td></tr>
+        <tr><td class="n">175</td><td class="n">19,560</td><td class="n">8.723</td><td class="n">−157</td><td class="n">3.598</td><td>violated</td></tr>
+        <tr><td class="n">200</td><td class="n">20,040</td><td class="n">8.806</td><td class="n">−698</td><td class="n">4.195</td><td>violated</td></tr>
+      </tbody>
+      <caption>The full sweep. <strong>F<sub>max</sub> in 0.5&thinsp;µm is
+      150&thinsp;MHz</strong> — six times the 25&thinsp;MHz target. The critical path is
+      in <code>u_sha256</code> at <em>every</em> frequency point, running from
+      <code>round_reg</code> through the Σ/CSA network into <code>e_reg</code>. Area is
+      flat from 35 to 75&thinsp;MHz and grows only 3.6% out to 200&thinsp;MHz; power fits
+      P = 20.9&thinsp;mW/MHz × f − 16&thinsp;mW with R² = 0.9998, extrapolating to
+      <strong>0.51&thinsp;W at the 25&thinsp;MHz target</strong>.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p><strong>Timing was never the constraint.</strong> The design has 6× headroom at
+    the target frequency. All of the effort that would normally go into closing timing
+    was available to spend on area, and none of it would have been enough: the gap is
+    8.5×, not 10%.</p>
+
+    <p><strong>Power is a second, independent problem.</strong> 0.51&thinsp;W at
+    25&thinsp;MHz is a lot for a part described as a lightweight root of trust. The cause
+    is the library: <code>khu_etri05_stdcells</code> is characterised at a
+    <strong>5&thinsp;V</strong> nominal supply, and dynamic power scales with V². A
+    1&thinsp;mm² die dissipating half a watt is also a thermal question, not just an
+    energy one. Leakage is negligible (2.6&thinsp;µW), as expected at this node.</p>
+
+    <h3>On my own earlier estimate</h3>
+    <p>Before the Genus reports were located, this report carried a bottom-up
+    reconstruction from the FPGA netlist. It is worth recording how it did, because the
+    failure mode is instructive.</p>
+  </div>
+
+  <div class="tablewrap wide">
+    <table>
+      <thead><tr><th></th><th class="n">Reconstruction</th><th class="n">Genus actual</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Flip-flops</td><td class="n">3,032 (FPGA)</td><td class="n">2,985 (<code>DFFSR</code>)</td><td>within 1.6%</td></tr>
+        <tr><td>Gate count</td><td class="n">~33 kGE</td><td class="n">39,333 GE</td><td>16% low</td></tr>
+        <tr class="mine"><td>µm² per GE</td><td class="n">80–90 assumed</td><td class="n">216.0 measured</td><td>2.5× low</td></tr>
+        <tr><td>Total area</td><td class="n">~4.4 mm²</td><td class="n">8.496 mm²</td><td>1.9× low</td></tr>
+      </tbody>
+      <caption>The logical estimate was close. The physical one was not.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p>The gate count was recoverable from the FPGA netlist to within 16%. The area was
+    not, because I assumed a denser 0.5&thinsp;µm library than this one actually is.
+    <code>khu_etri05_stdcells</code> is a 2-poly 3-metal 5&thinsp;V analog CMOS process —
+    216&thinsp;µm² per NAND2 against the 80–90 typical of a digital-optimised
+    0.5&thinsp;µm library. <strong>The conclusion was right and the margin was
+    understated by half.</strong> Never scale area across processes without the actual
+    library.</p>
+
+    <h3>What should have happened</h3>
+    <p>The project plan had six steps: architectural specs, verification, RTL design,
+    synthesis, place and route, sign-off. Synthesis was step 4. The area problem was
+    therefore discovered <em>after</em> the RTL was written and verified, which is the
+    most expensive place to find it. Three cheap checks, any one of which would have
+    caught it before step 3:</p>
+    <ol>
+      <li><strong>Count the architectural state and multiply.</strong> 1,024&thinsp;b
+      (SHA) + 320&thinsp;b (Ascon) + 768&thinsp;b (SPI buffers) ≈ 2,100 flip-flops on
+      paper. At the library's measured 1,584&thinsp;µm² per <code>DFFSR</code> that is
+      3.3&thinsp;mm² of <em>registers alone</em> — already 3× the die. This is
+      arithmetic, not synthesis.</li>
+      <li><strong>Synthesise the two cores early</strong>, against the real library, on
+      day one of RTL. Genus takes minutes on a design this size.</li>
+      <li><strong>Sanity-check the estimate against published work.</strong> Iterative
+      SHA-256 is widely reported at 15–22&thinsp;kGE; the spec assumed 10–15. Ascon-128
+      at one round per cycle is published at 7.9–9.4&thinsp;kGE
+      <a href="#r3">[3]</a><a href="#r6">[6]</a>; the spec assumed 3–5. Both estimates
+      were below every published figure.</li>
+    </ol>
+    <p>There is a design answer as well as a planning one. A 1&thinsp;mm² 0.5&thinsp;µm
+    die can hold Ascon-128 — but only if the wide parallel ports are replaced with a
+    byte-serial interface and SHA-256 is dropped. Removing SHA-256 (3.77&thinsp;mm²) and
+    the buffer controller's parallel storage (1.75&thinsp;mm²) takes 5.5 of the
+    8.5&thinsp;mm² out at a stroke. That is a different chip, and it is the chip that
+    would have taped out.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <h2><span class="num">04</span>The pivot to FPGA</h2>
+    <div class="h2rule"></div>
+    <p>Once the die was clearly out of reach, the work was redirected to producing a
+    verified core plus a hardware platform that proves it. The RTL defects are real
+    regardless of target; an FPGA gives a measurable baseline the ASIC path was never
+    going to produce; and timing closure at 100&thinsp;MHz is strictly harder than at
+    the 25&thinsp;MHz ASIC target, so passing on the FPGA says something useful about
+    the ASIC design.</p>
+
+    <h3>Two decisions worth defending</h3>
+    <h4>A custom AXI4-Lite peripheral, not AXI Quad SPI</h4>
+    <p>The obvious route is to drop in Xilinx's AXI Quad SPI IP as the master. I wrote
+    a small custom peripheral instead, for one reason: the whole PS-to-PL path can then
+    be simulated end to end against a real AXI4-Lite bus-functional model, and IP GUI
+    settings cannot. AXI Quad SPI has a build-time frequency ratio, a slave-select
+    register, FIFO behaviour, and an <code>XSpi</code> driver with real subtleties
+    around manual slave select — every one of those is a place to lose a day during
+    bring-up. The custom peripheral also has a <em>runtime</em>-settable clock divider,
+    which is what made the SCLK margin sweep possible on hardware. The cost is about
+    300 lines of Verilog that we own.</p>
+
+    <h4>One clock domain</h4>
+    <p>The AXI interface, the SPI master and <code>chip_top</code> all run on
+    <code>pl_clk0</code>. No clock domain crossing anywhere, the SPI path is an ordinary
+    register-to-register path that static timing analysis fully covers, and there are no
+    I/O timing constraints to get wrong. Behaviour is identical to a 25&thinsp;MHz clock
+    because the design is fully synchronous — what matters is the SCLK-to-clock
+    <em>ratio</em>, not the absolute frequency.</p>
+  </div>
+
+  <figure class="wide">
+    <div class="figbox">
+      <svg viewBox="0 0 900 250" role="img" aria-label="ZCU106 platform: the Cortex-A53 processing system drives crypto_axi_top over AXI4-Lite, which drives spi_master_lite into chip_top, plus LEDs and buttons.">
+        <rect x="26" y="70" width="180" height="90" rx="3" fill="var(--surface)" stroke="var(--rule-2)" stroke-width="1.5"/>
+        <text class="svgtext" x="116" y="98" text-anchor="middle" font-weight="700">Zynq UltraScale+ PS</text>
+        <text class="svgmono" x="116" y="118" text-anchor="middle">Cortex-A53, bare metal</text>
+        <text class="svgmono" x="116" y="134" text-anchor="middle">golden vectors + compare</text>
+
+        <rect x="276" y="26" width="600" height="204" rx="5" fill="none" stroke="var(--rule-2)" stroke-dasharray="5 4"/>
+        <text class="svglabel" x="290" y="46">PROGRAMMABLE LOGIC — ONE CLOCK DOMAIN, 100 MHz</text>
+
+        <rect x="300" y="64" width="164" height="76" rx="3" fill="var(--alarm-soft)" stroke="var(--alarm)"/>
+        <text class="svgtext" x="382" y="90" text-anchor="middle" font-weight="700">crypto_axi_top</text>
+        <text class="svgmono" x="382" y="108" text-anchor="middle">AXI4-Lite registers</text>
+        <text class="svgmono" x="382" y="123" text-anchor="middle">reset synchroniser</text>
+
+        <rect x="524" y="64" width="164" height="76" rx="3" fill="var(--alarm-soft)" stroke="var(--alarm)"/>
+        <text class="svgtext" x="606" y="90" text-anchor="middle" font-weight="700">spi_master_lite</text>
+        <text class="svgmono" x="606" y="108" text-anchor="middle">Mode 0</text>
+        <text class="svgmono" x="606" y="123" text-anchor="middle">runtime divider</text>
+
+        <rect x="524" y="166" width="164" height="52" rx="3" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width="1.5"/>
+        <text class="svgtext" x="606" y="188" text-anchor="middle" font-weight="700">chip_top</text>
+        <text class="svgmono" x="606" y="205" text-anchor="middle">unmodified ASIC RTL</text>
+
+        <rect x="300" y="166" width="164" height="52" rx="3" fill="var(--alarm-soft)" stroke="var(--alarm)"/>
+        <text class="svgtext" x="382" y="188" text-anchor="middle" font-weight="700">status_led + button_ctrl</text>
+        <text class="svgmono" x="382" y="205" text-anchor="middle">8 LEDs, 5-way switch</text>
+
+        <g stroke="var(--ink-2)" stroke-width="1.4" fill="none" marker-end="url(#ar2)">
+          <path d="M206,102 L294,102"/>
+          <path d="M464,102 L518,102"/>
+          <path d="M606,140 L606,160"/>
+          <path d="M382,140 L382,160"/>
+          <path d="M518,192 L470,192"/>
+        </g>
+        <defs>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9 z" fill="var(--ink-2)"/>
+          </marker>
+        </defs>
+        <text class="svgmono" x="250" y="94" text-anchor="middle">AXI4-Lite</text>
+        <text class="svgmono" x="700" y="154" text-anchor="start">sclk/mosi/miso/cs_n</text>
+        <text class="svgmono" x="494" y="184" text-anchor="middle">status</text>
+      </svg>
+    </div>
+    <figcaption>Orange blocks are FPGA-only scaffolding and are not intended to tape
+    out. Blue is the ASIC deliverable, instantiated with no changes.</figcaption>
+  </figure>
+</section>
+
+<section class="col">
+  <h2><span class="num">05</span>What was wrong with the RTL</h2>
+  <div class="h2rule"></div>
+  <p>Six defects. Five were confirmed by running the original code in simulation, not
+  by reading it.</p>
+
+  <h3>5.1 Ascon-128 produced the wrong authentication tag</h3>
+  <p><strong>Critical.</strong> Ascon requires the plaintext to be padded with
+  <code>0x80</code> followed by zeros up to a multiple of the 8-byte rate — and
+  critically, <em>a full padding block is appended even when the length is already a
+  multiple of 8</em>. The original core skipped the padding block entirely.</p>
+  <p>The ciphertext still came out correct, because the padding block contributes no
+  ciphertext bytes. But the padding block is absorbed into the state before
+  finalisation, so the tag was wrong for every single input:</p>
+<pre><code>pt_len=0   tag got 2cd6a332f04aaf580df298a559aa76a9
+           tag exp e355159f292911f794cb1432a0103a8a   &lt;- NIST LWC KAT
+
+pt_len=16  ct  got bc820dbdf7a4631c5b29884ad69175c3   &lt;- ciphertext correct
+           tag got f949e005f483688490270dd7033dfba5
+           tag exp f58e28436dd71556d58dfa56ac890beb   &lt;- tag wrong</code></pre>
+  <p>A wrong tag is the worst kind of failure here: encryption looks like it works,
+  and the fault only surfaces when someone tries to decrypt or authenticate.</p>
+
+  <h3>5.2 Result transmission never terminated</h3>
+  <p><code>byte_idx</code> in <code>spi_buffer_ctrl</code> was <code>reg [4:0]</code>,
+  so it counted 0 to 31. The transmit loop exited on
+  <code>byte_idx &gt;= result_len_latch</code> with <code>result_len_latch</code>
+  always 32. A 5-bit counter can never reach 32, so the comparison was never true. The
+  FSM streamed 32 correct bytes, then wrapped to 0 and kept streaming zeros forever.
+  The observable symptom: the first command works, and every command after it is
+  silently ignored.</p>
+
+  <h3>5.3 MISO was one bit early from the second byte onward</h3>
+  <p>The controller asserts <code>tx_load</code> a few system clocks after a byte
+  completes, which lands <em>before</em> the SCLK falling edge that ends that bit
+  period. The original code applied the load straight to the shift register, so that
+  falling edge shifted the freshly loaded byte one more time:</p>
+<pre><code>got 63 1b 9b 53 cd 89 ...
+exp 63 0d cd 29 66 c4 ...
+     ^  ^^ every byte after the first is shifted left by one bit</code></pre>
+  <p>This is the kind of bug that passes a core-level testbench and only appears once
+  you drive real SPI traffic.</p>
+
+  <h3>5.4 The other three</h3>
+  <ul>
+    <li><strong>Message alignment mismatch.</strong> <code>spi_buffer_ctrl</code>
+    accumulated bytes by shifting into the LSB end, leaving the message right-aligned;
+    both cores expect it left-aligned. The two only agree when <code>DATA_LEN</code> is
+    exactly 32, so any shorter message hashed the wrong block.</li>
+    <li><strong>Zero-length input hung the receive loop.</strong>
+    <code>S_RX_DATA</code> exited on <code>byte_idx == data_len_out - 1</code>; with
+    <code>data_len_out</code> zero that is <code>0xFF</code>, never reached.</li>
+    <li><strong>Unrecognised commands still ran SHA-256.</strong> A request with
+    neither command bit set fell into the SHA branch and returned a plausible-looking
+    wrong answer.</li>
+  </ul>
+
+  <h3>5.5 Also corrected</h3>
+  <ul>
+    <li><strong>The documented SCLK limit was wrong, and the spec's SPI clock is not
+    achievable.</strong> The header claimed f<sub>clk</sub>/2. Sweeping the rate, the
+    design passes at f<sub>clk</sub>/6 and fails at f<sub>clk</sub>/4; the documented
+    limit is now f<sub>clk</sub>/8. <strong>The project specification calls for a
+    5&thinsp;MHz SPI clock at a 25&thinsp;MHz system clock</strong> — that is
+    f<sub>clk</sub>/5, above the safe limit and inside the measured failure band. Either
+    the system clock has to rise or the SPI clock has to drop. This was not previously
+    flagged anywhere.</li>
+    <li><strong>Frame abort recovery.</strong> A frame ending early used to leave the
+    FSM stuck until reset. Receive states now abort cleanly back to idle.</li>
+    <li><strong>Watchdog.</strong> If a core never asserted <code>done</code> the chip
+    locked up forever. <code>crypto_fsm</code> now bounds the wait.</li>
+    <li><strong>Reset domain crossing.</strong> <code>rst_n</code> was used as an
+    asynchronous reset in some blocks and a synchronous reset in others, so different
+    parts of the design could leave reset on different clock edges — intermittent
+    start-up failures that are very hard to reproduce. The FPGA wrapper now contains a
+    proper async-assert / sync-release reset synchroniser.</li>
+  </ul>
+</section>
+
+<section>
+  <div class="col">
+    <h2><span class="num">06</span>Verification</h2>
+    <div class="h2rule"></div>
+    <p>The full suite was re-run for this report.</p>
+  </div>
+
+  <div class="tablewrap wide">
+    <table>
+      <thead><tr><th>Test</th><th>What it covers</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">button_unit</td><td>debounce, both-press window, hold, glitch rejection</td><td>pass</td></tr>
+        <tr><td class="mono">sha256_unit</td><td>36 vectors, every length 0–32, against Python <code>hashlib</code></td><td>pass</td></tr>
+        <tr><td class="mono">ascon_unit</td><td>37 vectors, every length 0–32 plus associated-data cases</td><td>pass</td></tr>
+        <tr><td class="mono">chip_e2e</td><td>29 vectors through the real SPI pins, plus rejection and abort</td><td>pass</td></tr>
+        <tr><td class="mono">axi_stack</td><td>17 checks through an AXI4-Lite bus-functional model</td><td>pass</td></tr>
+        <tr><td class="mono">sclk_margin</td><td>SCLK rate sweep to find the actual failure point</td><td>characterised</td></tr>
+        <tr><td class="mono">lint</td><td>Verilator <code>-Wall</code> on both top levels</td><td>clean</td></tr>
+        <tr><td class="mono">C build</td><td><code>gcc -Wall -Wextra</code> on the Vitis application</td><td>clean</td></tr>
+        <tr class="mine rule-top"><td>Hardware</td><td>ZCU106, Vitis on <code>psu_cortexa53_0</code></td><td>all pass</td></tr>
+      </tbody>
+      <caption>The Ascon golden reference is validated against the published NIST LWC
+      known-answer test: key and nonce <code>000102…0F</code>, empty AD, empty plaintext
+      gives tag <code>E355159F292911F794CB1432A0103A8A</code>.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p><strong>The SCLK margin sweep.</strong> f<sub>clk</sub>/16, /10, /8 and /6 pass;
+    /4 and /2 fail. Edge detection compares adjacent synchroniser stages, and the TX
+    byte handover needs three system clocks between a rising edge and the following
+    falling edge, so the limit is structural rather than arbitrary.</p>
+
+    <p><strong>On hardware.</strong> The bitstream was programmed onto the ZCU106 and
+    the bare-metal application launched on <code>psu_cortexa53_0</code> from Vitis. The
+    first thing it does is read the ID register at offset <code>0x00</code>, which
+    returns <code>0x5AA5C0DE</code>: if that reads back correctly then the bitstream,
+    clock, reset, address map and AXI path are all working, and any later failure is a
+    logic problem rather than an infrastructure problem. It then pushes known vectors
+    through the real SPI pins and compares on the A53. Every vector in the run passed
+    and all eight LEDs went solid.</p>
+
+    <p>The application holds 200 SHA-256 and 200 Ascon-128 known-answer vectors and draws
+    a random subset per button press, seeded from the CPU cycle counter at the moment of
+    the press, plus three negative tests (bad command, oversize length, recovery). So a
+    single run exercises a different sample each time rather than the same fixed list —
+    the right behaviour for catching input-dependent faults, but it does mean the pass
+    count printed over UART depends on the build's <code>SHA_PER_RUN</code> /
+    <code>ASC_PER_RUN</code> settings rather than being a fixed figure.</p>
+
+    <p>The eight user LEDs are driven as one bar rather than a red/green pair, because
+    the ZCU106's user LEDs are single-colour. Idle is a slow pulse (~0.38&thinsp;Hz),
+    running is a fast even blink (~6&thinsp;Hz), pass is solid on, fail is dark. Anything
+    moving means "no verdict yet"; anything static is the answer. Idle deliberately
+    pulses rather than sitting dark — otherwise a board waiting at the menu, a crashed
+    application and a bitstream that never programmed would all look identical to a
+    failing test.</p>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <h2><span class="num">07</span>Measured results</h2>
+    <div class="h2rule"></div>
+  </div>
+
+  <div class="tablewrap wide">
+    <table>
+      <thead><tr><th>Module</th><th class="n">LUT</th><th class="n">FF</th><th class="n">CARRY8</th><th class="n">WNS (ns)</th><th class="n">F<sub>max</sub></th></tr></thead>
+      <tbody>
+        <tr><td class="mono">sha256</td><td class="n">1,188</td><td class="n">1,302</td><td class="n">52</td><td class="n">5.832</td><td class="n">240 MHz</td></tr>
+        <tr><td class="mono">ascon128</td><td class="n">1,341</td><td class="n">728</td><td class="n">0</td><td class="n">7.219</td><td class="n">360 MHz</td></tr>
+        <tr><td class="mono">crypto_fsm</td><td class="n">2,603</td><td class="n">2,179</td><td class="n">52</td><td class="n">6.011</td><td class="n">251 MHz</td></tr>
+        <tr><td class="mono">spi_top</td><td class="n">608</td><td class="n">862</td><td class="n">0</td><td class="n">7.914</td><td class="n">479 MHz</td></tr>
+        <tr class="rule-top"><td class="mono">chip_top <span style="font-weight:400;color:var(--ink-3)">(ASIC deliverable)</span></td><td class="n">3,232</td><td class="n">3,032</td><td class="n">52</td><td class="n">5.740</td><td class="n">235 MHz</td></tr>
+        <tr class="mine rule-top"><td>Full system, placed &amp; routed</td><td class="n">3,923</td><td class="n">3,885</td><td class="n">71</td><td class="n">5.868</td><td class="n">242 MHz</td></tr>
+      </tbody>
+      <caption>XCZU7EV-FFVC1156-2-E, Vivado 2025.1. Rows 1–5 are out-of-context
+      synthesis, place and route with a 10&thinsp;ns constraint. The last row is the
+      complete block design including AXI SmartConnect, LEDs and buttons. F<sub>max</sub>
+      is 1/(T − WNS), which is optimistic — the tools stop optimising once the
+      constraint is met.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p>Zero BRAM, zero URAM, zero DSP. 781 CLBs, 185 unique control sets. The whole
+    design is 1.7% of the LUTs and 0.84% of the flip-flops on this device — a small part
+    on a very large FPGA, which is the point: the ZU7EV is a measuring instrument here,
+    not a deployment target.</p>
+  </div>
+
+  <div class="tablewrap wide">
+    <table>
+      <thead><tr><th>Component</th><th class="n">Power</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr class="mine"><td class="mono">crypto_axi_top</td><td class="n">31 mW</td><td>all PL logic — the number that means anything</td></tr>
+        <tr><td>AXI SmartConnect</td><td class="n">5 mW</td><td>interconnect overhead</td></tr>
+        <tr><td>PS8 (Cortex-A53 subsystem)</td><td class="n">2,656 mW</td><td>fixed Vivado estimate for the MPSoC</td></tr>
+        <tr><td>Device static</td><td class="n">692 mW</td><td>593 mW PL, 98 mW PS</td></tr>
+        <tr class="rule-top"><td>Total on-chip</td><td class="n">3,386 mW</td><td></td></tr>
+      </tbody>
+      <caption><code>report_power</code> on the routed design, 100&thinsp;MHz, default
+      switching activity. Confidence: low — no SAIF was back-annotated, so treat
+      31&thinsp;mW as an upper bound rather than a measurement. The headline 3.4&thinsp;W
+      is almost entirely the hard processor system and the static leakage of a large
+      FPGA; neither has anything to do with the crypto design.</caption>
+    </table>
+  </div>
+
+  <div class="tablewrap wide">
+    <table>
+      <thead><tr><th>Core</th><th>Case</th><th class="n">Cycles</th><th class="n">@ 25 MHz</th><th class="n">@ 100 MHz</th></tr></thead>
+      <tbody>
+        <tr><td>SHA-256</td><td>any length 0–32 B</td><td class="n">84</td><td class="n">3.36 µs</td><td class="n">0.84 µs</td></tr>
+        <tr><td>Ascon-128</td><td class="mono">pt_len=0</td><td class="n">33</td><td class="n">1.32 µs</td><td class="n">0.33 µs</td></tr>
+        <tr><td>Ascon-128</td><td class="mono">pt_len=8</td><td class="n">40</td><td class="n">1.60 µs</td><td class="n">0.40 µs</td></tr>
+        <tr><td>Ascon-128</td><td class="mono">pt_len=16</td><td class="n">47</td><td class="n">1.88 µs</td><td class="n">0.47 µs</td></tr>
+        <tr><td>Ascon-128</td><td class="mono">pt_len=16, ad_len=16</td><td class="n">71</td><td class="n">2.84 µs</td><td class="n">0.71 µs</td></tr>
+      </tbody>
+      <caption>Measured with a dedicated testbench, counting from the <code>start</code>
+      pulse to <code>done</code>. Ascon costs a flat 7 cycles per additional 64-bit rate
+      block (1 absorb + 6 permutation rounds). SHA-256 breaks down as 1 pad + 16 schedule
+      load + 64 compress + 2 output.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <h3>The system is I/O bound, not compute bound</h3>
+    <p>This is the most important measurement in the report and it was not in the
+    original spec. At the ASIC target — 25&thinsp;MHz system clock, SCLK capped at
+    f<sub>clk</sub>/8 = 3.125&thinsp;MHz — one SPI byte takes 2.56&thinsp;µs. A 32-byte
+    SHA-256 request needs a 34-byte command frame and a 32-byte readback frame.</p>
+  </div>
+
+  <figure class="wide">
+    <div class="figbox">
+      <svg viewBox="0 0 900 190" role="img" aria-label="Stacked bar chart: for a 32-byte SHA-256 request the SPI command frame is 87 microseconds, compute 3.4, readback 82. For a 16-byte Ascon request the command frame is 128 microseconds, compute 1.9, readback 82.">
+        <line x1="150" y1="20" x2="150" y2="128" stroke="var(--rule-2)"/>
+
+        <text class="svgtext" x="142" y="48" text-anchor="end">SHA-256, 32 B</text>
+        <rect x="150" y="32" width="272" height="26" fill="var(--signal)" opacity=".45" stroke="var(--signal)"/>
+        <rect x="422" y="32" width="11" height="26" fill="var(--alarm)" stroke="var(--alarm)"/>
+        <rect x="433" y="32" width="256" height="26" fill="var(--ink-3)" opacity=".3" stroke="var(--rule-2)"/>
+        <text class="svgmono" x="700" y="49">172.3 µs total · 1.9% compute</text>
+
+        <text class="svgtext" x="142" y="98" text-anchor="end">Ascon-128, 16 B</text>
+        <rect x="150" y="82" width="400" height="26" fill="var(--signal)" opacity=".45" stroke="var(--signal)"/>
+        <rect x="550" y="82" width="6" height="26" fill="var(--alarm)" stroke="var(--alarm)"/>
+        <rect x="556" y="82" width="256" height="26" fill="var(--ink-3)" opacity=".3" stroke="var(--rule-2)"/>
+        <text class="svgmono" x="822" y="99" text-anchor="end" fill="var(--ink)">211.8 µs</text>
+
+        <g class="svgmono" text-anchor="middle" fill="var(--ink-3)">
+          <text x="150" y="146">0</text><text x="306" y="146">50</text>
+          <text x="462" y="146">100</text><text x="618" y="146">150</text>
+          <text x="774" y="146">200</text>
+        </g>
+        <text class="svglabel" x="462" y="162" text-anchor="middle">END-TO-END LATENCY AT THE 25 MHz ASIC TARGET (µs)</text>
+
+        <g>
+          <rect x="180" y="172" width="12" height="10" fill="var(--signal)" opacity=".45" stroke="var(--signal)"/>
+          <text class="svgmono" x="198" y="181">SPI command frame</text>
+          <rect x="330" y="172" width="12" height="10" fill="var(--alarm)" stroke="var(--alarm)"/>
+          <text class="svgmono" x="348" y="181">crypto compute</text>
+          <rect x="470" y="172" width="12" height="10" fill="var(--ink-3)" opacity=".3" stroke="var(--rule-2)"/>
+          <text class="svgmono" x="488" y="181">SPI result readback</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>The red slice is the entire reason the chip exists. It is 1.9% of a
+    SHA-256 transaction and 0.9% of an Ascon transaction.</figcaption>
+  </figure>
+
+  <div class="tablewrap wide">
+    <table>
+      <thead><tr><th>Operation</th><th class="n">Total</th><th class="n">Compute share</th><th class="n">Effective</th><th class="n">Core capability</th></tr></thead>
+      <tbody>
+        <tr><td>SHA-256, 32 B</td><td class="n">172.3 µs</td><td class="n">1.9%</td><td class="n">1.49 Mbps</td><td class="n">152 Mbps</td></tr>
+        <tr><td>Ascon-128, 16 B</td><td class="n">211.8 µs</td><td class="n">0.9%</td><td class="n">0.60 Mbps</td><td class="n">229 Mbps</td></tr>
+      </tbody>
+      <caption>At 25&thinsp;MHz with SCLK at f<sub>clk</sub>/8. "Core capability" is the
+      sustained rate the core could deliver if data arrived instantly.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <div class="finding">
+      <p>The cores are being starved by a factor of roughly 100 and 380 respectively.
+      If this part had taped out, no amount of core optimisation would have shown up at
+      the pins.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="col">
+    <h2><span class="num">08</span>Against published implementations</h2>
+    <div class="h2rule"></div>
+    <h3>SHA-256</h3>
+  </div>
+
+  <div class="tablewrap wide">
+    <table>
+      <thead><tr><th>Work</th><th>Device</th><th class="n">LUT</th><th class="n">FF</th><th class="n">Freq</th><th class="n">Cyc/blk</th><th class="n">Throughput</th></tr></thead>
+      <tbody>
+        <tr class="mine"><td>This work</td><td>XCZU7EV</td><td class="n">1,188</td><td class="n">1,302</td><td class="n">240 MHz</td><td class="n">84</td><td class="n">1.46 Gbps</td></tr>
+        <tr class="mine"><td>This work</td><td>0.5 µm ETRI</td><td class="n" colspan="2">17,455 GE</td><td class="n">25 MHz</td><td class="n">84</td><td class="n">0.15 Gbps</td></tr>
+        <tr class="rule-top"><td>secworks/sha256 <a href="#r1">[1]</a></td><td>Artix-7 xc7a200t</td><td class="n">2,471</td><td class="n">1,930</td><td class="n">108 MHz</td><td class="n">66</td><td class="n">0.84 Gbps</td></tr>
+        <tr><td>secworks/sha256 <a href="#r1">[1]</a></td><td>Spartan-6</td><td class="n">2,012</td><td class="n">1,929</td><td class="n">70 MHz</td><td class="n">66</td><td class="n">0.54 Gbps</td></tr>
+        <tr><td>MDPI Sensors 2024, 1 core <a href="#r2">[2]</a></td><td>Virtex-6</td><td class="n">6,730</td><td class="n">794</td><td class="n">12.7 MHz</td><td class="n">65</td><td class="n">0.10 Gbps</td></tr>
+        <tr><td>Ref. [38] in <a href="#r2">[2]</a></td><td>Artix-7</td><td class="n">1,310</td><td class="n">881</td><td class="n">141.8 MHz</td><td class="n">—</td><td class="n">1.40 Gbps</td></tr>
+        <tr><td>Unfolded, in <a href="#r2">[2]</a></td><td>Arria II GX</td><td class="n">1,215</td><td class="n">871</td><td class="n">—</td><td class="n">32</td><td class="n">2.43 Gbps</td></tr>
+        <tr class="rule-top"><td>secworks/sha256 <a href="#r1">[1]</a></td><td>40 nm LP ASIC</td><td class="n" colspan="2">14,200 µm²</td><td class="n">250 MHz</td><td class="n">66</td><td class="n">1.94 Gbps</td></tr>
+      </tbody>
+      <caption>Throughput is 512 × f / cycles per block. Frequency comparisons across
+      device families are not meaningful; <strong>cycles per block</strong> is the
+      number to read.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p><strong>Where we stand.</strong> 17.5&thinsp;kGE sits inside the published
+    15–22&thinsp;kGE range for an iterative SHA-256, and 1,188 LUT / 1,302 FF is at the
+    small end of the FPGA field. But this is partly an unfair comparison: our core
+    handles a <em>single</em> 512-bit block with a fixed 256-bit input port and no
+    streaming, so it does not carry the multi-block control a general-purpose core needs.
+    A core that cannot hash more than 32 bytes is not really comparable to one that can
+    hash a file.</p>
+
+    <div class="finding">
+      <p><strong>Where we are behind: 84 cycles per block against a field of 65–66.</strong>
+      That is 27% slower for no architectural reason. Our core loads all 16
+      message-schedule words serially before starting compression, when the standard
+      approach folds the load into the first 16 compression rounds — <code>W[0..15]</code>
+      are consumed one per round anyway. Fixing it gets to ~67 cycles and costs no area.</p>
+    </div>
+
+    <h3>Ascon-128</h3>
+  </div>
+
+  <div class="tablewrap wide">
+    <table>
+      <thead><tr><th>Work</th><th>Platform</th><th class="n">Rnd/cyc</th><th class="n">LUT</th><th class="n">FF</th><th class="n">Area / throughput</th></tr></thead>
+      <tbody>
+        <tr class="mine"><td>This work</td><td>XCZU7EV</td><td class="n">1</td><td class="n">1,341</td><td class="n">728</td><td class="n">3.28 Gbps @ 360 MHz</td></tr>
+        <tr class="mine"><td>This work</td><td>0.5 µm ETRI</td><td class="n">1</td><td class="n" colspan="2">10,627 GE</td><td class="n">0.23 Gbps @ 25 MHz</td></tr>
+        <tr class="rule-top"><td>Malal <a href="#r4">[4]</a></td><td>Artix-7</td><td class="n">6</td><td class="n">2,957</td><td class="n">595</td><td class="n">3.54 Gbps @ 55 MHz</td></tr>
+        <tr><td>Malal <a href="#r4">[4]</a></td><td>Kintex-7</td><td class="n">6</td><td class="n">2,958</td><td class="n">595</td><td class="n">5.93 Gbps @ 93 MHz</td></tr>
+        <tr><td>Malal <a href="#r4">[4]</a></td><td>Spartan-7</td><td class="n">6</td><td class="n">2,957</td><td class="n">595</td><td class="n">3.44 Gbps @ 54 MHz</td></tr>
+        <tr><td>As tabulated in <a href="#r5">[5]</a></td><td>Artix-7</td><td class="n">—</td><td class="n">1,756</td><td class="n">912</td><td class="n">0.38 Gbps @ 55 MHz</td></tr>
+        <tr class="rule-top"><td>Groß, CAESAR HW API <a href="#r3">[3]</a></td><td>ASIC</td><td class="n">1</td><td class="n" colspan="2">9,420 GE</td><td class="n">4.89 Gbps</td></tr>
+        <tr><td>Groß, CAESAR HW API <a href="#r3">[3]</a></td><td>ASIC</td><td class="n">2</td><td class="n" colspan="2">12,989 GE</td><td class="n">8.48 Gbps</td></tr>
+        <tr><td>Groß, CAESAR HW API <a href="#r3">[3]</a></td><td>ASIC</td><td class="n">6</td><td class="n" colspan="2">27,280 GE</td><td class="n">12.26 Gbps</td></tr>
+        <tr><td>Optimised IoT design <a href="#r6">[6]</a></td><td>ASIC</td><td class="n">1</td><td class="n" colspan="2">7,891 GE</td><td class="n">—</td></tr>
+      </tbody>
+      <caption>Our Ascon core is 1 round per cycle, so the 1-round ASIC rows are the fair
+      comparison.</caption>
+    </table>
+  </div>
+
+  <div class="col">
+    <p><strong>Where we stand.</strong> 10,627&thinsp;GE against Groß's
+    9,420&thinsp;GE for the same 1-round-per-cycle architecture <a href="#r3">[3]</a> and
+    7,891&thinsp;GE for an area-optimised design <a href="#r6">[6]</a>. We are 13% larger
+    than the CAESAR-API reference and 35% larger than the best published — respectable,
+    but not best-in-class, and the gap is almost certainly the 256-bit <code>ad</code>
+    and <code>plaintext</code> input ports, which hold data the core consumes 64 bits at
+    a time. On FPGA, 1,341 LUT is smaller than every design in the table, and it closes
+    at 360&thinsp;MHz, the fastest block in the design by a wide margin.</p>
+
+    <p><strong>Where we are behind: rounds per cycle.</strong> Every high-performance
+    design in the literature unrolls. Malal's 6-round unroll <a href="#r4">[4]</a>
+    finishes a 64-bit block in 2 cycles instead of 7, and Groß's ASIC data shows the
+    trade curve directly: 1 → 2 rounds costs 38% more area for 73% more throughput. For a
+    25&thinsp;MHz ASIC that is the wrong trade. But this core is not running at
+    25&thinsp;MHz any more.</p>
+  </div>
+</section>
+
+<section class="wide">
+  <div class="col">
+    <h2><span class="num">09</span>What still needs work</h2>
+    <div class="h2rule"></div>
+    <p>Ordered by value per unit of effort.</p>
+  </div>
+
+  <div class="work">
+    <div class="worktop">
+      <span class="rank">01</span>
+      <span class="worktitle">Overlap the SHA-256 message schedule with compression</span>
+      <span class="cost">½ day · low risk</span>
+    </div>
+    <p>84 → ~67 cycles, a 20% latency cut, at no area cost. The 16 schedule words are
+    consumed one per round; there is no reason to load them in a separate 16-cycle phase
+    first. The 36-vector unit test catches any mistake immediately.</p>
+  </div>
+
+  <div class="work">
+    <div class="worktop">
+      <span class="rank">02</span>
+      <span class="worktitle">Widen the host interface, or the chip is pointless</span>
+      <span class="cost">1–3 days · medium risk</span>
+    </div>
+    <p>The SPI link is 98–99% of every transaction. Three options: <strong>raise
+    SCLK</strong> — the measured failure point is f<sub>clk</sub>/4 and the documented
+    limit is f<sub>clk</sub>/8, so restructuring the TX byte handover would make
+    f<sub>clk</sub>/4 safe, a straight 2×. <strong>Quad SPI or a parallel bus</strong> —
+    4× on the data phases. <strong>Overlap</strong> — nothing today lets the host stream
+    the next command while the previous result is read; double-buffering the result
+    register would hide the entire readback frame. The SPI timing is where the original
+    bugs lived, so the margin sweep must be re-run.</p>
+  </div>
+
+  <div class="work">
+    <div class="worktop">
+      <span class="rank">03</span>
+      <span class="worktitle">Remove the 32-byte ceiling</span>
+      <span class="cost">3–5 days · medium risk</span>
+    </div>
+    <p>Both cores are single-block. SHA-256 cannot hash anything longer than 32 bytes,
+    which for a firmware-integrity part is close to disqualifying — real firmware images
+    are megabytes. Ascon is capped at 16 bytes of plaintext by the 256-bit result bus,
+    not by the core. Multi-block streaming means feeding the core a block at a time and
+    keeping the chaining value; for SHA-256 this is mostly control logic, and the
+    compression function does not change.</p>
+  </div>
+
+  <div class="work">
+    <div class="worktop">
+      <span class="rank">04</span>
+      <span class="worktitle">Move the boot decision on-chip</span>
+      <span class="cost">2–3 days + OTP macro</span>
+    </div>
+    <p>Today the chip returns a digest and the host compares it. That means the
+    comparison — the actual security decision — happens in software the chip is supposed
+    to be protecting. Storing a reference digest in on-chip OTP and driving a
+    <code>boot_ok</code>/<code>boot_error</code> pin directly would close that gap, and
+    it is already drawn that way in the project's own architecture diagram.</p>
+  </div>
+
+  <div class="work">
+    <div class="worktop">
+      <span class="rank">05</span>
+      <span class="worktitle">Expose associated data</span>
+      <span class="cost">1 day · low risk</span>
+    </div>
+    <p><code>ad_len</code> is tied to zero in the SPI protocol. The core implements AD
+    correctly and it is covered by the unit tests, so this is a protocol change, not a
+    core change. Without it the Ascon interface is not really AEAD, only AE.</p>
+  </div>
+
+  <div class="work">
+    <div class="worktop">
+      <span class="rank">06</span>
+      <span class="worktitle">Add Ascon decryption and tag verification</span>
+      <span class="cost">2–3 days</span>
+    </div>
+    <p>Encryption only, today. An AEAD core that cannot verify is half a core, and
+    constant-time tag comparison in hardware is straightforward.</p>
+  </div>
+
+  <div class="work">
+    <div class="worktop">
+      <span class="rank">07</span>
+      <span class="worktitle">Side-channel resistance — nothing has been done here</span>
+      <span class="cost">design-level decision</span>
+    </div>
+    <p>This is a key-handling part for defence equipment with an unprotected datapath.
+    The key sits in a plain register and the permutation is unmasked. Published protected
+    Ascon designs run around 41&thinsp;kGE against 9&thinsp;kGE unprotected
+    <a href="#r5">[5]</a> — a 4.5× area penalty — so this has to be decided up front, not
+    retrofitted. Nobody should ship this against a physical-access threat model as it
+    stands.</p>
+  </div>
+
+  <div class="work">
+    <div class="worktop">
+      <span class="rank">08</span>
+      <span class="worktitle">If the ASIC is revived, re-scope before writing any RTL</span>
+      <span class="cost">before any RTL</span>
+    </div>
+    <p>The area table says what to cut. Dropping SHA-256 removes 3.77&thinsp;mm²;
+    replacing the parallel input ports with a byte-serial interface removes most of
+    <code>spi_buffer_ctrl</code>'s 1.75&thinsp;mm². That takes 8.5&thinsp;mm² down toward
+    3&thinsp;mm² — still over a 1&thinsp;mm² slot, so either the die grows or a newer node
+    is used. At 0.5&thinsp;µm and 216&thinsp;µm² per gate, <strong>1&thinsp;mm² buys about
+    4,600 gates</strong>. That is the real budget, and it should be the first number in
+    the next specification.</p>
+  </div>
+
+  <div class="work">
+    <div class="worktop">
+      <span class="rank">09</span>
+      <span class="worktitle">Housekeeping</span>
+      <span class="cost">as needed</span>
+    </div>
+    <p>The Vivado build script <code>scripts/build_zcu106.tcl</code> has never been
+    executed against a real Vivado installation — the manual block-design flow is the
+    reliable path. All pin assignments come from the ZCU106 Rev1.0 master XDC; a different
+    board revision needs re-checking, because wrong pins still build and the LEDs simply
+    never light. Genus was also run without a wireload model (<code>Net-Area = 0</code>),
+    so the 8.5&thinsp;mm² is a floor, not a final number — a physical-aware run with the
+    supplied LEF and QRC tech files would give the real figure.</p>
+  </div>
+</section>
+
+<section class="col">
+  <h2><span class="num">10</span>Reproducing this</h2>
+  <div class="h2rule"></div>
+  <p>Sources are at <code>~/Desktop/trustcore_vivado</code> and on GitHub at
+  <code>github.com/tk685-cpu/trustcore</code>.</p>
+<pre><code>rtl/                  ASIC deliverable — instantiated unmodified, do not edit
+  chip_top.v          top level, status pins
+  spi_top.v  spi_slave.v  spi_buffer_ctrl.v
+  crypto_fsm.v        command validation, watchdog
+  sha256.v            iterative, 84 cycles/block
+  ascon128.v          spec-compliant padding
+rtl_fpga/             FPGA-only scaffolding — not for tape-out
+  crypto_axi_top.v    AXI4-Lite peripheral, reset synchroniser
+  spi_master_lite.v   SPI Mode 0 master, runtime divider
+  status_led.v  button_ctrl.v
+synthesis/            Genus flow
+  genus.tcl  constraints.sdc  run_sweep.sh
+  reports/            13 frequency points, area/gates/power/timing
+  netlist/chip_top_genus.v
+lib/                  khu_etri05_stdcells.lib, LEF, GDS2, QRC tech files
+constraints/zcu106_crypto.xdc
+scripts/run_sim.sh    the whole verification suite
+vitis/main.c          bare-metal validation application
+sim/                  testbenches + Python golden reference
+plot/plot_ppa.py      the PPA sweep charts</code></pre>
+  <p>Run the suite with <code>cd scripts &amp;&amp; ./run_sim.sh</code>. It needs
+  <code>iverilog</code>, <code>python3</code>, and optionally <code>verilator</code> for
+  the lint step.</p>
+  <div class="note">
+    <p>On the lab machine the Xilinx tools put an old <code>libstdc++</code> on
+    <code>LD_LIBRARY_PATH</code>, which breaks <code>iverilog</code> with a
+    <code>GLIBCXX_3.4.32 not found</code> error. Run
+    <code>env -u LD_LIBRARY_PATH ./run_sim.sh</code> instead.</p>
+  </div>
+</section>
+
+<footer class="col">
+  <p class="eyebrow" style="margin-bottom:14px">References</p>
+  <ol>
+    <li id="r1">J. Strömbergson, <em>secworks/sha256 — Hardware implementation of the
+    SHA-256 cryptographic hash function.</em> FPGA and 40&thinsp;nm ASIC results in the
+    project README. <a href="https://github.com/secworks/sha256">github.com/secworks/sha256</a></li>
+    <li id="r2"><em>SHA-256 Hardware Proposal for IoT Devices in the Blockchain
+    Context</em>, Sensors 24(12):3908, MDPI, 2024.
+    <a href="https://www.mdpi.com/1424-8220/24/12/3908">mdpi.com/1424-8220/24/12/3908</a></li>
+    <li id="r3"><em>Ascon — Implementations</em>, Institute of Applied Information
+    Processing and Communications, TU Graz. CAESAR Hardware API ASIC results by H. Groß.
+    <a href="https://ascon.isec.tugraz.at/implementations.html">ascon.isec.tugraz.at/implementations.html</a></li>
+    <li id="r4">A. Malal, <em>ascon-vhdl</em>, and <em>High-Performance FPGA
+    Implementations of Lightweight ASCON-128 and ASCON-128a with Enhanced
+    Throughput-to-Area Efficiency</em>, IACR ePrint 2025/825.
+    <a href="https://github.com/AhmetMALAL/ascon-vhdl">github.com/AhmetMALAL/ascon-vhdl</a> ·
+    <a href="https://eprint.iacr.org/2025/825">eprint.iacr.org/2025/825</a></li>
+    <li id="r5">J. Kaur, A. Cintas Canto, M. Mozaffari Kermani, R. Azarderakhsh,
+    <em>A Comprehensive Survey on the Implementations, Attacks, and Countermeasures of the
+    Current NIST Lightweight Cryptography Standard</em>, arXiv:2304.06222, 2023.
+    <a href="https://arxiv.org/abs/2304.06222">arxiv.org/abs/2304.06222</a></li>
+    <li id="r6"><em>An Optimized Hardware Implementation of ASCON Cipher for IoT
+    Applications</em>, Springer, 2024.
+    <a href="https://link.springer.com/chapter/10.1007/978-981-97-3756-7_22">link.springer.com/chapter/10.1007/978-981-97-3756-7_22</a></li>
+  </ol>
+</footer>
+
+</div>

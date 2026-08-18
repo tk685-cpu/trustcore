@@ -1,0 +1,4 @@
+domain_path: /home/dllab/Desktop/trustcore_vivado/vitis/platform/export/platform/sw/crypto_test
+app_src_dir: /tools/Xilinx/2025.1/Vitis/data/embeddedsw/lib/sw_apps/empty_application
+template: empty_application
+lang: c

@@ -1,0 +1,3 @@
+/home/dllab/Desktop/trustcore_vivado/vitis/platform/zynqmp_fsbl/build/CMakeFiles/fsbl.elf.dir
+/home/dllab/Desktop/trustcore_vivado/vitis/platform/zynqmp_fsbl/build/CMakeFiles/edit_cache.dir
+/home/dllab/Desktop/trustcore_vivado/vitis/platform/zynqmp_fsbl/build/CMakeFiles/rebuild_cache.dir

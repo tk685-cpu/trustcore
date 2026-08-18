@@ -1,0 +1,16 @@
+{
+  "name": "crypto_test",
+  "type": "HOST",
+  "platform": "platform",
+  "domain": "crypto_test",
+  "cpuInstance": "psu_cortexa53_0",
+  "cpuType": "cortex-a53",
+  "os": "standalone",
+  "configuration": {
+    "componentType": "HOST",
+    "hostToolchainConfigurations": []
+  },
+  "domainRealName": "crypto_test",
+  "useSysrootToolchain": false,
+  "applicationFlow": "EMBEDDED"
+}
