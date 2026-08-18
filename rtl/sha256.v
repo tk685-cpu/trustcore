@@ -2,44 +2,59 @@
 // sha256.v
 // SHA-256 Hash Core
 //
-// Architecture : Iterative — 1 compression round per clock cycle
+// Architecture : Iterative -- 1 compression round per clock cycle
 // Spec         : FIPS 180-4 SHA-256
-// Features     : Internal padding (single 512-bit block), msg up to 55 bytes
-// Target       : 0.5um CMOS ASIC, 25 MHz system clock
+// Features     : Internal padding, single 512-bit block
+// Target       : 0.5um CMOS ASIC, 25 MHz system clock (also FPGA validated)
 //
 // SHA-256 Algorithm Steps:
-//   1. Padding    : msg || 0x80 || zeros || 64-bit length → 512-bit block
-//   2. Schedule   : W[0..15] loaded from block directly (1 word/cycle)
-//   3. Compress   : 64 rounds using W[0] each round, slide window left
-//   4. Output     : digest = H0_INIT+a || ... || H7_INIT+h
+//   1. Padding    : msg || 0x80 || zeros || 64-bit bit-length -> 512-bit block
+//   2. Schedule   : W[0..15] loaded from the block, one word per cycle
+//   3. Compress   : 64 rounds using W[0], sliding the window left each round
+//   4. Output     : digest = (H0+a) || (H1+b) || ... || (H7+h)
+//
+// MESSAGE ALIGNMENT:
+//   `message` must be LEFT-aligned, i.e. the first message byte sits in
+//   message[255:248] and unused low bytes are zero. spi_buffer_ctrl is
+//   responsible for producing that alignment.
+//
+// LENGTH LIMIT:
+//   A single 512-bit block leaves room for 55 bytes of message, but the
+//   256-bit input port caps this at 32. msg_len is clamped to 32 internally
+//   so an out-of-range request produces a defined result rather than a
+//   corrupt block. crypto_fsm rejects such requests before they get here.
 //
 // W window convention during COMPRESS:
-//   W[0]  = W[t]       (current round word, fed into T1)
-//   W[1]  = W[t+1]     (used for σ0 in schedule)
-//   W[9]  = W[t+7]... actually W[t+9] wait let me redo
-//   Each cycle: slide left (W[0] drops, W[1..15] → W[0..14]), W[15] = W_new
+//   W[0]  = W[t]     current round word, fed into T1
+//   W[1]  = W[t+1]   used for sigma0 in the schedule
+//   W[9]  = W[t+9]   used in the schedule addition
+//   W[14] = W[t+14]  used for sigma1 in the schedule
+//   Each cycle: slide left (W[0] drops, W[1..15] -> W[0..14]), W[15] = W_new
 //
-// Interface:
-//   - Driven by spi_buffer_ctrl via data_ready pulse
-//   - Outputs 256-bit digest
+// Timing: 1 (pad) + 16 (schedule) + 64 (compress) + 2 = 83 clocks per hash.
 // =============================================================================
 
 module sha256 (
-    input  wire        clk,
-    input  wire        rst_n,
+    input  wire         clk,
+    input  wire         rst_n,
 
     // Control
-    input  wire        start,       // 1-cycle pulse: begin hashing
-    output reg         busy,        // high while processing
-    output reg         done,        // 1-cycle pulse: digest is valid
+    input  wire         start,       // 1-cycle pulse: begin hashing
+    output reg          busy,        // high while processing
+    output reg          done,        // 1-cycle pulse: digest is valid
 
     // Input (held stable while busy)
-    input  wire [255:0] message,    // message data (up to 32 bytes, left-aligned)
-    input  wire [7:0]   msg_len,    // message length in bytes (max 55)
+    input  wire [255:0] message,     // message bytes, LEFT-aligned (MSB first)
+    input  wire [7:0]   msg_len,     // message length in bytes (0..32)
 
     // Output
-    output reg  [255:0] digest      // 256-bit SHA-256 hash
+    output reg  [255:0] digest       // 256-bit SHA-256 hash
 );
+
+    // =========================================================================
+    // Clamp the length to what the input port can actually hold.
+    // =========================================================================
+    wire [7:0] len_c = (msg_len > 8'd32) ? 8'd32 : msg_len;
 
     // =========================================================================
     // SHA-256 Initial Hash Values (H0..H7)
@@ -56,9 +71,9 @@ module sha256 (
     // =========================================================================
     // SHA-256 Round Constants K[0..63]
     // Implemented as a synthesizable combinational lookup (function + case),
-    // NOT an initial block -- initial blocks are simulation-only and are
-    // dropped during synthesis, which would leave K tied to all zeros on
-    // the real chip while still "working" in simulation.
+    // NOT an initial block. Initial blocks are simulation-only and are dropped
+    // during synthesis, which would leave K tied to zero on real silicon while
+    // still "working" in simulation.
     // =========================================================================
     function [31:0] k_val;
         input [6:0] idx;
@@ -112,7 +127,7 @@ module sha256 (
     localparam S_DONE     = 3'd5;
 
     reg [2:0] state;
-    reg [6:0] round;   // 0..15 for SCHED, 0..63 for COMPRESS
+    reg [6:0] round;   // 0..15 in SCHED, 0..63 in COMPRESS
 
     // =========================================================================
     // Padded 512-bit block
@@ -121,60 +136,44 @@ module sha256 (
 
     // =========================================================================
     // Message schedule window W[0..15]
-    // During COMPRESS:
-    //   W[0]  = W[t]       current round word → used in T1
-    //   W[1]  = W[t+1]     → used in σ0 for W_new
-    //   W[9]  = W[t+9]     → used in W_new addition
-    //   W[14] = W[t+14]    → used in σ1 for W_new
-    //   W[15] = W[t+15]    → becomes W_new storage slot
-    //
-    // Each cycle: slide left (W[0] drops, W[0..14]←W[1..15]), W[15] = W_new
     // =========================================================================
     reg [31:0] W [0:15];
 
     // =========================================================================
-    // Working variables and hash state
+    // Working variables
     // =========================================================================
     reg [31:0] a, b, c, d, e, f, g, h;
 
     // =========================================================================
     // Combinational schedule functions
-    // σ0(x) = ROR(x,7) ^ ROR(x,18) ^ SHR(x,3)   applied to W[1] = W[t+1]
-    // σ1(x) = ROR(x,17) ^ ROR(x,19) ^ SHR(x,10)  applied to W[14] = W[t+14]
-    // W_new = W[t+16] = σ1(W[t+14]) + W[t+9] + σ0(W[t+1]) + W[t]
-    //       = σ1(W[14]) + W[9] + σ0(W[1]) + W[0]
+    // sigma0(x) = ROR(x,7) ^ ROR(x,18) ^ SHR(x,3)    applied to W[1]
+    // sigma1(x) = ROR(x,17) ^ ROR(x,19) ^ SHR(x,10)  applied to W[14]
+    // W_new = sigma1(W[14]) + W[9] + sigma0(W[1]) + W[0]
     // =========================================================================
-    wire [31:0] sigma0_w = {W[1][6:0],  W[1][31:7]}    // ROR(W[1], 7)
-                         ^ {W[1][17:0], W[1][31:18]}    // ROR(W[1], 18)
-                         ^ {3'b000,     W[1][31:3]};    // SHR(W[1], 3)
+    wire [31:0] sigma0_w = {W[1][6:0],  W[1][31:7]}     // ROR(W[1], 7)
+                         ^ {W[1][17:0], W[1][31:18]}     // ROR(W[1], 18)
+                         ^ {3'b000,     W[1][31:3]};     // SHR(W[1], 3)
 
-    wire [31:0] sigma1_w = {W[14][16:0], W[14][31:17]} // ROR(W[14], 17)
-                         ^ {W[14][18:0], W[14][31:19]} // ROR(W[14], 19)
-                         ^ {10'b0,       W[14][31:10]};// SHR(W[14], 10)
+    wire [31:0] sigma1_w = {W[14][16:0], W[14][31:17]}  // ROR(W[14], 17)
+                         ^ {W[14][18:0], W[14][31:19]}  // ROR(W[14], 19)
+                         ^ {10'b0,       W[14][31:10]}; // SHR(W[14], 10)
 
     wire [31:0] W_new = sigma1_w + W[9] + sigma0_w + W[0];
 
     // =========================================================================
     // Combinational compression functions
-    // Ch(e,f,g)  = (e & f) ^ (~e & g)
-    // Maj(a,b,c) = (a & b) ^ (a & c) ^ (b & c)
-    // Σ0(a) = ROR(a,2) ^ ROR(a,13) ^ ROR(a,22)
-    // Σ1(e) = ROR(e,6) ^ ROR(e,11) ^ ROR(e,25)
-    // T1 = h + Σ1(e) + Ch(e,f,g) + K[round] + W[0]   ← W[0] is current word
-    // T2 = Σ0(a) + Maj(a,b,c)
     // =========================================================================
     wire [31:0] Ch  = (e & f) ^ (~e & g);
     wire [31:0] Maj = (a & b) ^ (a & c) ^ (b & c);
 
-    wire [31:0] SIG0 = {a[1:0],  a[31:2]}    // ROR(a, 2)
-                     ^ {a[12:0], a[31:13]}    // ROR(a, 13)
-                     ^ {a[21:0], a[31:22]};   // ROR(a, 22)
+    wire [31:0] SIG0 = {a[1:0],  a[31:2]}      // ROR(a, 2)
+                     ^ {a[12:0], a[31:13]}      // ROR(a, 13)
+                     ^ {a[21:0], a[31:22]};     // ROR(a, 22)
 
-    wire [31:0] SIG1 = {e[5:0],  e[31:6]}    // ROR(e, 6)
-                     ^ {e[10:0], e[31:11]}    // ROR(e, 11)
-                     ^ {e[24:0], e[31:25]};   // ROR(e, 25)
+    wire [31:0] SIG1 = {e[5:0],  e[31:6]}      // ROR(e, 6)
+                     ^ {e[10:0], e[31:11]}      // ROR(e, 11)
+                     ^ {e[24:0], e[31:25]};     // ROR(e, 25)
 
-    // T1 uses W[0] — the current round's message schedule word
     wire [31:0] T1 = h + SIG1 + Ch + k_val(round) + W[0];
     wire [31:0] T2 = SIG0 + Maj;
 
@@ -193,7 +192,7 @@ module sha256 (
             digest <= 256'd0;
             a <= 32'd0; b <= 32'd0; c <= 32'd0; d <= 32'd0;
             e <= 32'd0; f <= 32'd0; g <= 32'd0; h <= 32'd0;
-            // Initialise W to 0 so no X values propagate
+            // Initialise W to 0 so no X values propagate in simulation
             W[ 0] <= 32'd0; W[ 1] <= 32'd0; W[ 2] <= 32'd0; W[ 3] <= 32'd0;
             W[ 4] <= 32'd0; W[ 5] <= 32'd0; W[ 6] <= 32'd0; W[ 7] <= 32'd0;
             W[ 8] <= 32'd0; W[ 9] <= 32'd0; W[10] <= 32'd0; W[11] <= 32'd0;
@@ -203,7 +202,7 @@ module sha256 (
 
             case (state)
 
-                // ── Wait for start ──
+                // -- Wait for start --
                 S_IDLE: begin
                     if (start) begin
                         busy  <= 1'b1;
@@ -211,18 +210,20 @@ module sha256 (
                     end
                 end
 
-                // ── Build padded 512-bit block ──
-                // message occupies top msg_len bytes of block (left-aligned)
-                // then 0x80, then zeros, then 64-bit length at bottom
+                // -- Build the padded 512-bit block --
+                // The message occupies the top len_c bytes, then 0x80, then
+                // zeros, then the 64-bit bit-length at the very bottom.
+                //
+                // These are overlapping non-blocking part-select writes to one
+                // register: later writes override earlier ones for the bits
+                // they cover. This is well-defined in IEEE 1364 and is handled
+                // correctly by Vivado, Design Compiler and Genus alike.
                 S_PAD: begin
-                    // Clear block, then write message, padding byte, and length
-                    block <= 512'd0;
-
-                    // Top 256 bits: message (already left-aligned in input port)
+                    block          <= 512'd0;
                     block[511:256] <= message;
 
-                    // 0x80 padding byte immediately after message
-                    case (msg_len)
+                    // 0x80 padding byte immediately after the message
+                    case (len_c)
                         8'd0:  block[511:504] <= 8'h80;
                         8'd1:  block[503:496] <= 8'h80;
                         8'd2:  block[495:488] <= 8'h80;
@@ -255,14 +256,13 @@ module sha256 (
                         8'd29: block[279:272] <= 8'h80;
                         8'd30: block[271:264] <= 8'h80;
                         8'd31: block[263:256] <= 8'h80;
-                        8'd32: block[255:248] <= 8'h80;
-                        default: block[255:248] <= 8'h80;
+                        default: block[255:248] <= 8'h80;   // len_c == 32
                     endcase
 
-                    // 64-bit message length in bits at the very end of block
-                    block[63:0] <= {56'd0, msg_len} << 3;
+                    // 64-bit message length in BITS at the end of the block
+                    block[63:0] <= {53'd0, len_c, 3'b000};
 
-                    // Initialise working variables to initial hash values
+                    // Initialise working variables to the initial hash values
                     a <= H0_INIT; b <= H1_INIT; c <= H2_INIT; d <= H3_INIT;
                     e <= H4_INIT; f <= H5_INIT; g <= H6_INIT; h <= H7_INIT;
 
@@ -270,11 +270,7 @@ module sha256 (
                     state <= S_SCHED;
                 end
 
-                // ── Load W[0..15] directly from block (16 cycles) ──
-                // W[0] = block word 0 = block[511:480]
-                // W[1] = block word 1 = block[479:448]  etc.
-                // After this: W[0]=M[0], W[1]=M[1], ..., W[15]=M[15]
-                // When COMPRESS starts, W[0] is the word for round 0. ✓
+                // -- Load W[0..15] directly from the block (16 cycles) --
                 S_SCHED: begin
                     case (round[3:0])
                         4'd0:  W[0]  <= block[511:480];
@@ -297,18 +293,15 @@ module sha256 (
                     endcase
 
                     if (round == 7'd15) begin
-                        round <= 7'd0;   // reset counter for 64-round COMPRESS
+                        round <= 7'd0;   // restart counter for the 64 rounds
                         state <= S_COMPRESS;
                     end else begin
                         round <= round + 1'b1;
                     end
                 end
 
-                // ── 64 rounds of SHA-256 compression ──
-                // T1 uses W[0] — the current round's message word
-                // After each round: slide window left, W[15] = W_new
+                // -- 64 rounds of SHA-256 compression --
                 S_COMPRESS: begin
-                    // Update working variables
                     h <= g;
                     g <= f;
                     f <= e;
@@ -318,7 +311,7 @@ module sha256 (
                     b <= a;
                     a <= T1 + T2;
 
-                    // Slide W window left: W[0] drops off, new word enters W[15]
+                    // Slide the W window left; the new word enters at W[15]
                     for (idx = 0; idx < 15; idx = idx + 1)
                         W[idx] <= W[idx+1];
                     W[15] <= W_new;
@@ -330,7 +323,7 @@ module sha256 (
                     end
                 end
 
-                // ── Add compressed chunk to initial hash values ──
+                // -- Add the compressed chunk to the initial hash values --
                 S_FINAL: begin
                     digest <= {H0_INIT + a,
                                H1_INIT + b,
@@ -343,7 +336,7 @@ module sha256 (
                     state <= S_DONE;
                 end
 
-                // ── Signal completion ──
+                // -- Signal completion --
                 S_DONE: begin
                     done  <= 1'b1;
                     busy  <= 1'b0;
