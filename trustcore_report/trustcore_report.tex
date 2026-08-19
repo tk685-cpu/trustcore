@@ -35,11 +35,12 @@
 \definecolor{signal}{RGB}{31,78,121}
 
 \newcommand{\keyfinding}[1]{%
-  \begin{center}\fcolorbox{accent}{white}{\parbox{0.93\textwidth}{#1}}\end{center}}
+  \par\vspace{0.55em}
+  \noindent\hspace{0.035\textwidth}\parbox{0.93\textwidth}{#1}
+  \par\vspace{0.55em}}
 
 \title{\vspace{-1.7cm}\textbf{TrustCore-v1}\\[0.3em]
-\large A SHA-256 / Ascon-128 root-of-trust chip: why the ETRI tape-out did not\\
-fit, the RTL defects found on the way, and what the corrected core measures}
+\large Final Report --- Two-Month Internship}
 \author{Taehee Kim\\[-0.2em]\small Seoul National University}
 \date{July -- August 2026}
 
@@ -93,8 +94,56 @@ So the deliverable is not a chip. It is a corrected, verified crypto core, a
 measured hardware baseline, and a documented, quantified reason why the
 original target was never reachable.
 
+\subsection*{The code, and where to look in this report}
+
+Everything described here --- the RTL, the testbenches and Python golden
+reference, the Genus synthesis reports for all 13 frequency points, the
+constraints, and the Vivado / Vitis project --- is public:
+
+\begin{center}\large
+\url{https://github.com/tk685-cpu/trustcore}
+\end{center}
+
+The report is written so that each section answers one question. If you only
+want a specific answer, go straight to it.
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{@{}p{0.63\textwidth}l@{}}
+\toprule
+\textbf{If you want to know\ldots} & \textbf{Read} \\
+\midrule
+What the chip was specified to do, and how a host talks to it
+  & Section~\ref{sec:spec} \\
+Why the tape-out did not fit --- the area numbers, block by block, and what I
+got wrong in the original estimate
+  & Section~\ref{sec:asic} \\
+Why the project moved to an FPGA, and what that does and does not prove
+  & Section~\ref{sec:pivot} \\
+The six defects found in the original RTL, including the Ascon tag bug, and
+how each one was confirmed
+  & Section~\ref{sec:rtl} \\
+How correctness was established --- known-answer tests, testbenches, and the
+run on real hardware
+  & Section~\ref{sec:verif} \\
+The measured results: utilisation, timing, power, latency, and why the system
+is I/O bound
+  & Section~\ref{sec:results} \\
+How this compares against published SHA-256 and Ascon-128 implementations
+  & Section~\ref{sec:compare} \\
+Known limitations, and what I would do next if the work continued
+  & Section~\ref{sec:next} \\
+How to clone the repository and re-run the simulations and synthesis yourself
+  & Section~\ref{sec:repro} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Section~\ref{sec:repro} also maps every directory in the repository to what it
+contains, so a reader who wants to go straight to the source can start there.
+
 % =============================================================================
-\section{What the chip was supposed to be}
+\section{What the chip was supposed to be}\label{sec:spec}
 % =============================================================================
 
 A host sends a command frame over SPI, the chip runs either a SHA-256 hash or
@@ -174,7 +223,7 @@ decides. That is a design limitation worth stating plainly, because a root of
 trust that only advises is a weaker guarantee than one that gates.
 
 % =============================================================================
-\section{Why the ASIC path did not close}
+\section{Why the ASIC path did not close}\label{sec:asic}
 % =============================================================================
 
 \subsection{The estimate, and the measurement}
@@ -451,7 +500,7 @@ takes 5.5 of the 8.5\,mm$^2$ out at a stroke. That is a different chip, and it
 is the chip that would have taped out.
 
 % =============================================================================
-\section{The pivot to FPGA}
+\section{The pivot to FPGA}\label{sec:pivot}
 % =============================================================================
 
 Once the die was clearly out of reach, the work was redirected to producing a
@@ -524,7 +573,7 @@ instantiated with no changes.}
 \end{figure}
 
 % =============================================================================
-\section{What was wrong with the RTL}
+\section{What was wrong with the RTL}\label{sec:rtl}
 % =============================================================================
 
 Six defects. Five were confirmed by running the original code in simulation,
@@ -633,7 +682,7 @@ once you drive real SPI traffic. Fixed by staging the incoming byte in
 \end{itemize}
 
 % =============================================================================
-\section{Verification}
+\section{Verification}\label{sec:verif}
 % =============================================================================
 
 \begin{table}[h]
@@ -693,7 +742,7 @@ application and a bitstream that never programmed would all look identical to a
 failing test.
 
 % =============================================================================
-\section{Measured FPGA results}
+\section{Measured FPGA results}\label{sec:results}
 % =============================================================================
 
 \subsection{Resource utilisation and timing}
@@ -836,7 +885,7 @@ at a time, at 172\,\textmu s per transaction, takes about \textbf{5.6 seconds}
 --- and the SHA-256 core is idle for 98\% of it.}
 
 % =============================================================================
-\section{Comparison with published implementations}
+\section{Comparison with published implementations}\label{sec:compare}
 % =============================================================================
 
 \subsection{SHA-256}
@@ -938,7 +987,7 @@ For a 25\,MHz ASIC with 6$\times$ timing headroom that was the wrong trade ---
 but on the FPGA it is a straightforward win.
 
 % =============================================================================
-\section{What still needs work}
+\section{What still needs work}\label{sec:next}
 % =============================================================================
 
 Ordered by value per unit of effort.
@@ -1019,11 +1068,12 @@ a physical-aware run with the supplied LEF and QRC tech files would give the
 real figure.
 
 % =============================================================================
-\section{Reproducing this}
+\section{Reproducing this}\label{sec:repro}
 % =============================================================================
 
-Sources: \texttt{github.com/tk685-cpu/trustcore}, and
-\texttt{\textasciitilde/Desktop/trustcore\_vivado} on the lab machine.
+All sources are at \url{https://github.com/tk685-cpu/trustcore} (the working
+copy on the lab machine is \texttt{\textasciitilde/Desktop/trustcore\_vivado}).
+The layout of the repository is:
 
 {\small
 \begin{verbatim}

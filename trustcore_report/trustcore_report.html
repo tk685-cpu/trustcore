@@ -1,4 +1,4 @@
-<title>TrustCore — final report</title>
+<title>TrustCore-v1 — Internship Final Report</title>
 <style>
 /* ---------- tokens: light is the bare :root ---------- */
 :root{
@@ -83,9 +83,8 @@ header.mast{
 h1{
   font-size:clamp(34px,5.4vw,54px);
   line-height:1.04;letter-spacing:-.028em;font-weight:700;
-  margin:0 0 14px;text-wrap:balance;
+  margin:0 0 22px;text-wrap:balance;
 }
-.dek{font-size:19px;line-height:1.45;color:var(--ink-2);max-width:56ch;margin:0 0 26px;text-wrap:balance}
 .byline{
   display:flex;flex-wrap:wrap;gap:8px 26px;
   font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
@@ -94,7 +93,7 @@ h1{
 
 /* ---------- verdict strip ---------- */
 .verdict{
-  display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
   gap:1px;background:var(--rule);border:1px solid var(--rule);
   border-radius:3px;overflow:hidden;margin:0 0 52px;
 }
@@ -132,12 +131,35 @@ li{margin:0 0 7px}
 
 /* ---------- finding callout ---------- */
 .finding{
-  border-left:3px solid var(--alarm);
-  background:var(--alarm-soft);
-  padding:16px 20px;margin:26px 0;border-radius:0 3px 3px 0;
+  border-left:2px solid var(--rule-2);
+  padding:4px 0 4px 20px;margin:26px 0;
 }
 .finding p{margin:0;font-size:17px;line-height:1.5}
-.finding.calm{border-left-color:var(--signal);background:var(--signal-soft)}
+.finding.calm{border-left-color:var(--rule-2)}
+/* ---------- repo link + reading guide ---------- */
+.repo{
+  display:block;margin:20px 0 30px;padding:16px 18px;text-align:center;
+  background:var(--sunk);border:1px solid var(--rule);border-radius:3px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:15px;word-break:break-all;
+}
+.guide{list-style:none;padding:0;margin:18px 0 0}
+.guide li{
+  display:flex;gap:18px;align-items:baseline;
+  padding:11px 0;border-top:1px solid var(--rule);
+}
+.guide li:last-child{border-bottom:1px solid var(--rule)}
+.guide .to{
+  flex:0 0 84px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  font-size:11.5px;letter-spacing:.11em;text-transform:uppercase;
+  white-space:nowrap;
+}
+.guide .what{font-size:15.5px;color:var(--ink-2);line-height:1.45}
+@media (max-width:520px){
+  .guide li{flex-direction:column;gap:4px}
+  .guide .to{flex:none}
+}
 .note{
   border:1px dashed var(--rule-2);background:var(--sunk);
   padding:14px 18px;border-radius:3px;margin:24px 0;
@@ -198,14 +220,13 @@ footer li{margin-bottom:8px}
 <div class="wrap">
 
 <header class="mast">
-  <p class="eyebrow">Final report · Seoul National University</p>
-  <h1>TrustCore-v1</h1>
-  <p class="dek">A SHA-256 / Ascon-128 root-of-trust chip: why the ETRI tape-out did
-  not fit, the RTL defects found on the way, and what the corrected core measures.</p>
+  <p class="eyebrow">Two-month internship · Seoul National University</p>
+  <h1>TrustCore-v1 — Final Report</h1>
   <div class="byline">
     <span>Taehee Kim · Seoul National University</span>
     <span>0.5&thinsp;µm ETRI CMOS → Zynq UltraScale+ XCZU7EV</span>
     <span>July – August 2026</span>
+    <span><a href="https://github.com/tk685-cpu/trustcore">github.com/tk685-cpu/trustcore</a></span>
   </div>
 </header>
 
@@ -283,9 +304,49 @@ footer li{margin-bottom:8px}
   <p>So the deliverable is not a chip. It is a corrected, verified crypto core with a
   measured hardware baseline and a documented reason why the original target was never
   reachable.</p>
+
+  <h3>The code, and where to look in this report</h3>
+
+  <p>Everything described here — the RTL, the testbenches and Python golden reference,
+  the Genus synthesis reports for all 13 frequency points, the constraints, and the
+  Vivado / Vitis project — is public:</p>
+
+  <a class="repo" href="https://github.com/tk685-cpu/trustcore">github.com/tk685-cpu/trustcore</a>
+
+  <p>The report is written so that each section answers one question. If you only want
+  a specific answer, go straight to it.</p>
+
+  <ul class="guide">
+    <li><span class="to"><a href="#s2">Section 2</a></span><span class="what">What the
+      chip was specified to do, and how a host talks to it</span></li>
+    <li><span class="to"><a href="#s3">Section 3</a></span><span class="what">Why the
+      tape-out did not fit — the area numbers, block by block, and what I got wrong in
+      the original estimate</span></li>
+    <li><span class="to"><a href="#s4">Section 4</a></span><span class="what">Why the
+      project moved to an FPGA, and what that does and does not prove</span></li>
+    <li><span class="to"><a href="#s5">Section 5</a></span><span class="what">The six
+      defects found in the original RTL, including the Ascon tag bug, and how each one
+      was confirmed</span></li>
+    <li><span class="to"><a href="#s6">Section 6</a></span><span class="what">How
+      correctness was established — known-answer tests, testbenches, and the run on real
+      hardware</span></li>
+    <li><span class="to"><a href="#s7">Section 7</a></span><span class="what">The
+      measured results: utilisation, timing, power, latency, and why the system is I/O
+      bound</span></li>
+    <li><span class="to"><a href="#s8">Section 8</a></span><span class="what">How this
+      compares against published SHA-256 and Ascon-128 implementations</span></li>
+    <li><span class="to"><a href="#s9">Section 9</a></span><span class="what">Known
+      limitations, and what I would do next if the work continued</span></li>
+    <li><span class="to"><a href="#s10">Section 10</a></span><span class="what">How to
+      clone the repository and re-run the simulations and synthesis yourself</span></li>
+  </ul>
+
+  <p style="margin-top:18px">Section 10 also maps every directory in the repository to
+  what it contains, so a reader who wants to go straight to the source can start
+  there.</p>
 </section>
 
-<section>
+<section id="s2">
   <div class="col">
     <h2><span class="num">02</span>What the chip was supposed to be</h2>
     <div class="h2rule"></div>
@@ -379,7 +440,7 @@ footer li{margin-bottom:8px}
   </figure>
 </section>
 
-<section>
+<section id="s3">
   <div class="col">
     <h2><span class="num">03</span>Why the ASIC path did not close</h2>
     <div class="h2rule"></div>
@@ -626,7 +687,7 @@ footer li{margin-bottom:8px}
   </div>
 </section>
 
-<section>
+<section id="s4">
   <div class="col">
     <h2><span class="num">04</span>The pivot to FPGA</h2>
     <div class="h2rule"></div>
@@ -709,7 +770,7 @@ footer li{margin-bottom:8px}
   </figure>
 </section>
 
-<section class="col">
+<section id="s5" class="col">
   <h2><span class="num">05</span>What was wrong with the RTL</h2>
   <div class="h2rule"></div>
   <p>Six defects. Five were confirmed by running the original code in simulation, not
@@ -788,7 +849,7 @@ exp 63 0d cd 29 66 c4 ...
   </ul>
 </section>
 
-<section>
+<section id="s6">
   <div class="col">
     <h2><span class="num">06</span>Verification</h2>
     <div class="h2rule"></div>
@@ -848,7 +909,7 @@ exp 63 0d cd 29 66 c4 ...
   </div>
 </section>
 
-<section>
+<section id="s7">
   <div class="col">
     <h2><span class="num">07</span>Measured results</h2>
     <div class="h2rule"></div>
@@ -982,7 +1043,7 @@ exp 63 0d cd 29 66 c4 ...
   </div>
 </section>
 
-<section>
+<section id="s8">
   <div class="col">
     <h2><span class="num">08</span>Against published implementations</h2>
     <div class="h2rule"></div>
@@ -1067,7 +1128,7 @@ exp 63 0d cd 29 66 c4 ...
   </div>
 </section>
 
-<section class="wide">
+<section id="s9" class="wide">
   <div class="col">
     <h2><span class="num">09</span>What still needs work</h2>
     <div class="h2rule"></div>
@@ -1194,11 +1255,13 @@ exp 63 0d cd 29 66 c4 ...
   </div>
 </section>
 
-<section class="col">
+<section id="s10" class="col">
   <h2><span class="num">10</span>Reproducing this</h2>
   <div class="h2rule"></div>
-  <p>Sources are at <code>~/Desktop/trustcore_vivado</code> and on GitHub at
-  <code>github.com/tk685-cpu/trustcore</code>.</p>
+  <p>All sources are at
+  <a href="https://github.com/tk685-cpu/trustcore">github.com/tk685-cpu/trustcore</a>
+  (the working copy on the lab machine is <code>~/Desktop/trustcore_vivado</code>).
+  The layout of the repository is:</p>
 <pre><code>rtl/                  ASIC deliverable — instantiated unmodified, do not edit
   chip_top.v          top level, status pins
   spi_top.v  spi_slave.v  spi_buffer_ctrl.v
